@@ -20,5 +20,6 @@ echo "replik(){" >> $RC
 echo '    CURDIR=$PWD' >> $RC
 echo "    REPDIR=$DIR" >> $RC
 echo '    cd $REPDIR && python -m replik.replik $CURDIR $@' >> $RC
+echo '    cd $CURDIR' >> $RC
 echo "}" >> $RC
 echo "# << replik (end)" >> $RC

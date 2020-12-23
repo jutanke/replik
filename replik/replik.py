@@ -31,8 +31,23 @@ def replik(directory, tool, script):
         help(directory)
     elif tool == "enter":
         enter(directory, script)
-
+    elif tool == "check":
+        check(directory)
     print("\n")
+
+
+def check(directory):
+    """check if the directories still fit"""
+    console.write(f"'{directory}' is valid replik project:")
+    settings = get_replik_settings(directory)
+    project_name = settings["name"]
+    console.write(f"project name: {project_name}")
+    console.write("project paths:")
+    for path in get_data_paths(directory):
+        if isdir(path):
+            console.success(f"\t{path}")
+        else:
+            console.fail(f"\t{path}")
 
 
 def enter(directory, script):
@@ -41,6 +56,46 @@ def enter(directory, script):
 
 def run(directory, script):
     build(directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh")
+
+
+def get_data_paths(directory):
+    info = get_replik_settings(directory)
+    alternative_data_file = join(directory, ".data.txt")
+    data = info["data"]
+    if info["use_alternative_data_paths"]:
+        if isfile(alternative_data_file):
+            with open(alternative_data_file, "r") as f:
+                data_cur = [l for l in f.readlines() if len(l) > 0]
+            if len(data_cur) != len(data):
+                console.fail(
+                    "The number of files noted in .data.txt do not match! Fix manually!"
+                )
+                exit(0)
+            else:
+                data = data_cur
+        else:
+            console.write("Cannot find alterative data paths: set them up now:")
+            data_cur = []
+            with open(alternative_data_file, "w") as f:
+                for path in data:
+                    if isdir(path):
+                        console.success(f"keep {path}? [Y/n]")
+                        add_data = input()
+                        if add_data.lower() == "n":
+                            console.write("add new path:")
+                            add_data = input()
+                            assert isdir(add_data)
+                            data_cur.append(add_data)
+                            f.write(add_data + "\n")
+                    else:
+                        console.write(f"Add new path for {path}")
+                        add_data = input()
+                        assert isdir(add_data)
+                        data_cur.append(add_data)
+                        f.write(add_data + "\n")
+            data = data_cur
+
+    return data
 
 
 def build(directory, script, final_docker_exec_command):
@@ -108,7 +163,7 @@ def build(directory, script, final_docker_exec_command):
         # add gpu
         docker_exec_command += "--gpus all "
     docker_exec_command += f"-v {src_dir}:/home/user/{name} "
-    for path in info["data"]:
+    for path in get_data_paths(directory):
         if isdir(path):
             console.success(f"map {path}")
             bn = basename(path)
@@ -129,17 +184,7 @@ def help(directory):
     console.write(f"replik path: {replik_dir}\n")
 
     if is_replik_project(directory):
-        console.write(f"'{directory}' is valid replik project:")
-        settings = get_replik_settings(directory)
-        project_name = settings["name"]
-        data_paths = settings["data"]
-        console.write(f"project name: {project_name}")
-        console.write("project paths:")
-        for path in data_paths:
-            if isdir(path):
-                console.success(f"\t{path}")
-            else:
-                console.fail(f"\t{path}")
+        check(directory)
 
 
 def is_replik_project(directory: str) -> bool:
@@ -179,7 +224,12 @@ def init(directory):
         return
     print("\n")
 
-    info = {"name": project_name, "tag": f"replik_{project_name}", "data": []}
+    info = {
+        "name": project_name,
+        "tag": f"replik_{project_name}",
+        "data": [],
+        "use_alternative_data_paths": False,
+    }
 
     console.write("Do you want to add data directories? [y/N]")
     add_data = input()
@@ -214,6 +264,12 @@ def init(directory):
 
     with open(replik_fname, "w") as f:
         json.dump(info, f, indent=4, sort_keys=True)
+
+    gitignore = join(directory, ".gitignore")
+    mode = "a" if isfile(gitignore) else "w"
+    with open(gitignore, mode) as f:
+        f.write("\n")
+        f.write(".data.txt")
 
 
 if __name__ == "__main__":

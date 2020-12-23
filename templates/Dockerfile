@@ -82,6 +82,6 @@ RUN conda install -y numpy \
     zeromq \
     zlib
 
-RUN conda install -y -c menpo opencv3 && conda update conda & conda update --all &&\
+RUN conda install -y -c conda-forge opencv && conda update conda & conda update --all &&\
     apt-get update && apt-get install -y vim tmux htop wget &&\
     pip install transforms3d

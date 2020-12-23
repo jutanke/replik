@@ -1,0 +1,2 @@
+# add Dockerfile RUN's that are executed after the user is set
+RUN echo "after-user hook"

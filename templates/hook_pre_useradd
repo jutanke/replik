@@ -1,0 +1,2 @@
+# add Dockerfile RUN's that are executed before the user is set
+RUN echo "pre-user hook"

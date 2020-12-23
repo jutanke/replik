@@ -3,9 +3,12 @@ replik creates an easy-to-reuse environment based on docker
 """
 import json
 import os
-from os import makedirs
-from os.path import isdir, isfile, join
+import sys
+from os import makedirs, remove
+from os.path import basename, isdir, isfile, join
 from shutil import copyfile
+from subprocess import call
+from typing import Dict
 
 import click
 
@@ -24,14 +27,136 @@ def replik(directory, tool, script):
         init(directory)
     elif tool == "run":
         run(directory, script)
+    elif tool == "help":
+        help(directory)
+    elif tool == "enter":
+        enter(directory, script)
 
     print("\n")
 
 
+def enter(directory, script):
+    build(directory, script, final_docker_exec_command="/bin/bash")
+
+
 def run(directory, script):
+    build(directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh")
+
+
+def build(directory, script, final_docker_exec_command):
     """
     """
-    pass
+    if not is_replik_project(directory):
+        console.fail(f"{directory} is not a valid replik project")
+        exit(0)
+
+    # backup the "base" Dockerfile
+    dockerdir = join(directory, "docker")
+    dockerfile = join(dockerdir, "Dockerfile")
+    dockerfile_bkp = join(dockerdir, "Dockerfile.bkp")
+    hook_pre_useradd = join(dockerdir, "hook_pre_useradd")
+    hook_post_useradd = join(dockerdir, "hook_post_useradd")
+    if isfile(dockerfile_bkp):
+        remove(dockerfile_bkp)
+    copyfile(dockerfile, dockerfile_bkp)
+    remove(dockerfile)
+
+    info = get_replik_settings(directory)
+    tag = info["tag"]
+    name = info["name"]
+
+    # build the proper Dockerfile
+    with open(dockerfile, "w") as D:
+        with open(dockerfile_bkp) as D_base:
+            for line in D_base:
+                D.write(line)
+        D.write("\n")
+        with open(hook_pre_useradd) as hook:
+            for line in hook:
+                D.write(line)
+        D.write("\n")
+
+        # add user
+        uid = os.getuid()
+        D.write(f'RUN adduser --disabled-password --gecos "" -u {uid} user')
+        D.write("\nUSER user\n")
+
+        with open(hook_post_useradd) as hook:
+            for line in hook:
+                D.write(line)
+
+        # add the script call
+        D.write("\n")
+        D.write(
+            'RUN echo "source ~/.bashrc\\n'
+            + f'cd /home/user/{name}/scripts && python {script}"'
+            + " >> /home/user/run.sh"
+        )
+
+    r = call(f"cd {dockerdir} && docker build --tag='replik/{tag}' .", shell=True)
+    remove(dockerfile)
+    copyfile(dockerfile_bkp, dockerfile)
+    remove(dockerfile_bkp)
+    if r != 0:
+        console.fail("building failed\n")
+        exit(0)
+
+    # execute the docker image
+    src_dir = join(directory, name)
+    docker_exec_command = 'docker run --privileged --shm-size="8g" '
+    if sys.platform != "darwin":
+        # add gpu
+        docker_exec_command += "--gpus all "
+    docker_exec_command += f"-v {src_dir}:/home/user/{name} "
+    for path in info["data"]:
+        if isdir(path):
+            console.success(f"map {path}")
+            bn = basename(path)
+            docker_exec_command += f"-v {path}:/home/user/{bn} "
+        else:
+            console.warning(f"could not map {path}")
+    docker_exec_command += f"--rm -it replik/{tag} "
+    docker_exec_command += final_docker_exec_command
+
+    call(docker_exec_command, shell=True)
+
+
+def help(directory):
+    """ help info
+    """
+    replik_dir = os.getcwd()
+    console.info("*** replik ***")
+    console.write(f"replik path: {replik_dir}\n")
+
+    if is_replik_project(directory):
+        console.write(f"'{directory}' is valid replik project:")
+        settings = get_replik_settings(directory)
+        project_name = settings["name"]
+        data_paths = settings["data"]
+        console.write(f"project name: {project_name}")
+        console.write("project paths:")
+        for path in data_paths:
+            if isdir(path):
+                console.success(f"\t{path}")
+            else:
+                console.fail(f"\t{path}")
+
+
+def is_replik_project(directory: str) -> bool:
+    """True if the directory is a valid replik repo"""
+    replik_fname = join(directory, ".replik")
+    return isfile(replik_fname)
+
+
+def get_replik_settings(directory: str) -> Dict:
+    """
+    """
+    if not is_replik_project(directory):
+        console.fail(f"Directory {directory} is no replik project")
+        exit(0)  # exit program
+    replik_fname = join(directory, ".replik")
+    with open(replik_fname, "r") as f:
+        return json.load(f)
 
 
 def init(directory):
@@ -42,7 +167,7 @@ def init(directory):
 
     replik_fname = join(directory, ".replik")
     console.write(f"initialize at {directory}")
-    if isfile(replik_fname):
+    if is_replik_project(directory):
         console.fail(f"Directory already contains a 'replik'")
         return
 
@@ -54,7 +179,7 @@ def init(directory):
         return
     print("\n")
 
-    info = {"name": project_name, "data": []}
+    info = {"name": project_name, "tag": f"replik_{project_name}", "data": []}
 
     console.write("Do you want to add data directories? [y/N]")
     add_data = input()
@@ -74,11 +199,18 @@ def init(directory):
     makedirs(docker_dir)
 
     # copy templates to appropriate folders
+    def copy2tar(fname: str, templates_dir: str, directory: str):
+        src_file = join(templates_dir, fname)
+        tar_file = join(directory, fname)
+        copyfile(src_file, tar_file)
+
     copyfile(join(templates_dir, "Dockerfile"), join(docker_dir, "Dockerfile"))
     dockerignore_tar = join(docker_dir, ".dockerignore")
     copyfile(join(templates_dir, "dockerignore"), dockerignore_tar)
     demoscript_tar = join(script_dir, "demo_script.py")
     copyfile(join(templates_dir, "demo_script.py"), demoscript_tar)
+    copy2tar("hook_post_useradd", templates_dir, join(directory, "docker"))
+    copy2tar("hook_pre_useradd", templates_dir, join(directory, "docker"))
 
     with open(replik_fname, "w") as f:
         json.dump(info, f, indent=4, sort_keys=True)

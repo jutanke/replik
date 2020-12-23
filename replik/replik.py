@@ -148,6 +148,12 @@ def build(directory, script, final_docker_exec_command):
             + " >> /home/user/run.sh"
         )
 
+        # add startup bash hook
+        D.write("\n")
+        D.write(
+            'RUN echo "/bin/bash /home/user/docker/bashhook.sh" >> /home/user/.bashrc'
+        )
+
     r = call(f"cd {dockerdir} && docker build --tag='replik/{tag}' .", shell=True)
     remove(dockerfile)
     copyfile(dockerfile_bkp, dockerfile)
@@ -158,11 +164,13 @@ def build(directory, script, final_docker_exec_command):
 
     # execute the docker image
     src_dir = join(directory, name)
+    docker_dir = join(directory, "docker")
     docker_exec_command = 'docker run --privileged --shm-size="8g" '
     if sys.platform != "darwin":
         # add gpu
         docker_exec_command += "--gpus all "
     docker_exec_command += f"-v {src_dir}:/home/user/{name} "
+    docker_exec_command += f"-v {docker_dir}:/home/user/docker "
     for path in get_data_paths(directory):
         if isdir(path):
             console.success(f"map {path}")
@@ -172,7 +180,6 @@ def build(directory, script, final_docker_exec_command):
             console.warning(f"could not map {path}")
     docker_exec_command += f"--rm -it replik/{tag} "
     docker_exec_command += final_docker_exec_command
-
     call(docker_exec_command, shell=True)
 
 
@@ -261,6 +268,7 @@ def init(directory):
     copyfile(join(templates_dir, "demo_script.py"), demoscript_tar)
     copy2tar("hook_post_useradd", templates_dir, join(directory, "docker"))
     copy2tar("hook_pre_useradd", templates_dir, join(directory, "docker"))
+    copy2tar("bashhook.sh", templates_dir, join(directory, "docker"))
 
     with open(replik_fname, "w") as f:
         json.dump(info, f, indent=4, sort_keys=True)

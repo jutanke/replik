@@ -6,6 +6,7 @@ git clone git@github.com:jutanke/replik.git ~/.replik
 cd ~/.replik
 bash install.sh
 ```
+To update to the latest version you simply have to `git pull` to the latest version.
 
 ## Usage
 To create a new replik repository, navigate to a folder and

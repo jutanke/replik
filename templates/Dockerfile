@@ -84,4 +84,4 @@ RUN conda install -y numpy \
 
 RUN conda install -y -c conda-forge opencv && conda update conda & conda update --all &&\
     apt-get update && apt-get install -y vim tmux htop wget &&\
-    pip install transforms3d
+    pip install transforms3d && pip install pyyaml

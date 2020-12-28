@@ -171,6 +171,10 @@ def build(directory, script, final_docker_exec_command):
         docker_exec_command += "--gpus all "
     docker_exec_command += f"-v {src_dir}:/home/user/{name} "
     docker_exec_command += f"-v {docker_dir}:/home/user/docker "
+    settings_dir = join(directory, "settings")
+    if isdir(settings_dir):
+        # if a settings dir exists add it as volume
+        docker_exec_command += f"-v {settings_dir}:/home/user/settings "
     for path in get_data_paths(directory):
         if isdir(path):
             console.success(f"map {path}")

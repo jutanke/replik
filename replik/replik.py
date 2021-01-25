@@ -119,6 +119,7 @@ def build(directory, script, final_docker_exec_command):
     info = get_replik_settings(directory)
     tag = info["tag"]
     name = info["name"]
+    docker_mem = info["docker_shm"]
 
     # build the proper Dockerfile
     with open(dockerfile, "w") as D:
@@ -165,7 +166,9 @@ def build(directory, script, final_docker_exec_command):
     # execute the docker image
     src_dir = join(directory, name)
     docker_dir = join(directory, "docker")
-    docker_exec_command = 'docker run --privileged --shm-size="8g" '
+    docker_exec_command = 'docker run --privileged --shm-size="'
+    docker_exec_command += docker_mem + '" '
+    
     if sys.platform != "darwin":
         # add gpu
         docker_exec_command += "--gpus all "
@@ -240,6 +243,7 @@ def init(directory):
         "tag": f"replik_{project_name}",
         "data": [],
         "use_alternative_data_paths": False,
+        "docker_shm": "8g",
     }
 
     console.write("Do you want to add data directories? [y/N]")

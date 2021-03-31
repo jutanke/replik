@@ -3,9 +3,25 @@ Create reproducible environments for deep learning/computer vision research for 
 To install the latest version of _replik_ simply clone this repository and run the install script:
 ```
 git clone git@github.com:jutanke/replik.git ~/.replik
+cd ~/.replik && pip install -r requirements.txt
+```
+To automatically install replik simply:
+```
 cd ~/.replik
 bash install.sh
 ```
+Alternatively, you add the following snippet to your `.bashrc` (or variant):
+```shell
+# >> replik (start)
+replik(){
+    CURDIR=$PWD
+    REPDIR=$HOME/.replik
+    cd $REPDIR && python -m replik.replik $CURDIR $@
+    cd $CURDIR
+}
+# << replik (end)
+```
+
 To update to the latest version you simply have to `git pull` to the latest version.
 
 ## Usage

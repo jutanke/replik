@@ -10,7 +10,7 @@ To automatically install replik simply:
 cd ~/.replik
 bash install.sh
 ```
-Alternatively, you add the following snippet to your `.bashrc` (or variant):
+Alternatively, add the following snippet to your `.bashrc` (or variant):
 ```shell
 # >> replik (start)
 replik(){

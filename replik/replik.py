@@ -91,6 +91,7 @@ def build(directory, script, final_docker_exec_command):
     info = get_replik_settings(directory)
     tag = info["tag"]
     name = info["name"]
+    docker_mem = info["docker_shm"]
 
     # build the proper Dockerfile
     with open(dockerfile, "w") as D:
@@ -137,12 +138,18 @@ def build(directory, script, final_docker_exec_command):
     # execute the docker image
     src_dir = join(directory, name)
     docker_dir = join(directory, "docker")
-    docker_exec_command = 'docker run --privileged --shm-size="8g" '
+    docker_exec_command = 'docker run --privileged --shm-size="'
+    docker_exec_command += docker_mem + '" '
+
     if sys.platform != "darwin":
         # add gpu
         docker_exec_command += "--gpus all "
     docker_exec_command += f"-v {src_dir}:/home/user/{name} "
     docker_exec_command += f"-v {docker_dir}:/home/user/docker "
+    settings_dir = join(directory, "settings")
+    if isdir(settings_dir):
+        # if a settings dir exists add it as volume
+        docker_exec_command += f"-v {settings_dir}:/home/user/settings "
     for path in get_data_paths(directory):
         if isdir(path):
             console.success(f"map {path}")
@@ -209,6 +216,7 @@ def init(directory):
         "tag": f"replik_{project_name}",
         "data": [],
         "use_alternative_data_paths": use_alternative_data_paths,
+        "docker_shm": "32g",
     }
 
     if use_alternative_data_paths:

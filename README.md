@@ -51,3 +51,9 @@ The container has the following structure:
 * `/home/user/{project_name}` maps the actual source code into the container
 * `/home/user/docker` maps the docker folder into the container
 * `/home/user/{basename(path)}` for each data path that was provided during the init process
+
+### Adding data paths
+Data can be mapped into the containers by simply editing the `paths.json` in the project root.
+This file contains a list of folders which will be mapped into the container by their base name.
+As of now `replik` supports either absolute paths or no path at all (a word without containing '/'). If a word is detected the path will be mapped to a folder with the same name in the project root; if this directory does not yet exist it will be created.
+

@@ -65,7 +65,17 @@ def get_data_paths(directory):
     if info["use_alternative_data_paths"]:
         assert isfile(alternative_data_file), alternative_data_file
         with open(alternative_data_file, "r") as f:
-            data = json.load(f)
+            data_from_file = json.load(f)
+            data = []
+            for d in data_from_file:
+                if "/" in d:
+                    data.append(d)
+                else:
+                    # make any "lonely" folder relative to the project dir
+                    d = join(directory, d)
+                    if not isdir(d):
+                        makedirs(d)
+                    data.append(d)
 
     return data
 

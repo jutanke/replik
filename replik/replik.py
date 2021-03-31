@@ -60,40 +60,12 @@ def run(directory, script):
 
 def get_data_paths(directory):
     info = get_replik_settings(directory)
-    alternative_data_file = join(directory, ".data.txt")
+    alternative_data_file = join(directory, "paths.json")
     data = info["data"]
     if info["use_alternative_data_paths"]:
-        if isfile(alternative_data_file):
-            with open(alternative_data_file, "r") as f:
-                data_cur = [l for l in f.readlines() if len(l) > 0]
-            if len(data_cur) != len(data):
-                console.fail(
-                    "The number of files noted in .data.txt do not match! Fix manually!"
-                )
-                exit(0)
-            else:
-                data = data_cur
-        else:
-            console.write("Cannot find alterative data paths: set them up now:")
-            data_cur = []
-            with open(alternative_data_file, "w") as f:
-                for path in data:
-                    if isdir(path):
-                        console.success(f"keep {path}? [Y/n]")
-                        add_data = input()
-                        if add_data.lower() == "n":
-                            console.write("add new path:")
-                            add_data = input()
-                            assert isdir(add_data)
-                            data_cur.append(add_data)
-                            f.write(add_data + "\n")
-                    else:
-                        console.write(f"Add new path for {path}")
-                        add_data = input()
-                        assert isdir(add_data)
-                        data_cur.append(add_data)
-                        f.write(add_data + "\n")
-            data = data_cur
+        assert isfile(alternative_data_file), alternative_data_file
+        with open(alternative_data_file, "r") as f:
+            data = json.load(f)
 
     return data
 
@@ -220,7 +192,7 @@ def init(directory):
     replik_fname = join(directory, ".replik")
     console.write(f"initialize at {directory}")
     if is_replik_project(directory):
-        console.fail(f"Directory already contains a 'replik'")
+        console.fail(f"Directory already contains a 'replik' project")
         return
 
     # create folder structure
@@ -231,22 +203,33 @@ def init(directory):
         return
     print("\n")
 
+    use_alternative_data_paths = True  # this is only for backward-compatibilty
     info = {
         "name": project_name,
         "tag": f"replik_{project_name}",
         "data": [],
-        "use_alternative_data_paths": False,
+        "use_alternative_data_paths": use_alternative_data_paths,
     }
 
-    console.write("Do you want to add data directories? [y/N]")
-    add_data = input()
-    while add_data == "y":
-        console.write("data path:")
-        data_path = input()
-        assert isdir(data_path), data_path
-        info["data"].append(data_path)
-        console.write("Do you want to add additional data directories? [y/N]")
+    if use_alternative_data_paths:
+        output_dir = join(directory, "output")
+        makedirs(output_dir)
+
+        data_fname = join(directory, "paths.json")
+        data_locations = [output_dir]
+        with open(data_fname, "w") as f:
+            json.dump(data_locations, f, indent=4, sort_keys=True)
+
+    else:
+        console.write("Do you want to add data directories? [y/N]")
         add_data = input()
+        while add_data == "y":
+            console.write("data path:")
+            data_path = input()
+            assert isdir(data_path), data_path
+            info["data"].append(data_path)
+            console.write("Do you want to add additional data directories? [y/N]")
+            add_data = input()
 
     project_dir = join(directory, project_name)
     makedirs(project_dir)
@@ -254,6 +237,13 @@ def init(directory):
     makedirs(script_dir)
     docker_dir = join(directory, "docker")
     makedirs(docker_dir)
+
+    # handle .gitignore
+    gitignore_file = join(directory, ".gitignore")
+
+    with open(gitignore_file, "a+") as f:
+        f.write("output/\n")
+        f.write("paths.json\n")
 
     # copy templates to appropriate folders
     def copy2tar(fname: str, templates_dir: str, directory: str):
@@ -273,11 +263,12 @@ def init(directory):
     with open(replik_fname, "w") as f:
         json.dump(info, f, indent=4, sort_keys=True)
 
-    gitignore = join(directory, ".gitignore")
-    mode = "a" if isfile(gitignore) else "w"
-    with open(gitignore, mode) as f:
-        f.write("\n")
-        f.write(".data.txt")
+    if not use_alternative_data_paths:
+        gitignore = join(directory, ".gitignore")
+        mode = "a" if isfile(gitignore) else "w"
+        with open(gitignore, mode) as f:
+            f.write("\n")
+            f.write(".data.txt")
 
 
 if __name__ == "__main__":

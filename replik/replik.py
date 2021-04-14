@@ -19,14 +19,22 @@ import replik.console as console
 @click.argument("directory")
 @click.argument("tool")
 @click.option("--script", default="demo_script.py")
-def replik(directory, tool, script):
+@click.option("--extra_paths", default="")
+def replik(directory, tool, script, extra_paths):
     """
+    :param extra_paths: path to file that contains extra paths
+        [
+            {
+                "dir": "/path/to/folder",
+                "alias": "alias_inside_container"
+            }
+        ]
     """
     print("\n")
     if tool == "init":
         init(directory)
     elif tool == "run":
-        run(directory, script)
+        run(directory, script, extra_paths)
     elif tool == "help":
         help(directory)
     elif tool == "enter":
@@ -54,8 +62,8 @@ def enter(directory, script):
     build(directory, script, final_docker_exec_command="/bin/bash")
 
 
-def run(directory, script):
-    build(directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh")
+def run(directory, script, extra_paths):
+    build(directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh", extra_paths=extra_paths)
 
 
 def get_data_paths(directory):
@@ -80,8 +88,15 @@ def get_data_paths(directory):
     return data
 
 
-def build(directory, script, final_docker_exec_command):
+def build(directory, script, final_docker_exec_command, extra_paths=""):
     """
+    :param extra_paths: path to file that contains extra paths
+        [
+            {
+                "dir": "/path/to/folder",
+                "alias": "alias_inside_container"
+            }
+        ]
     """
     if not is_replik_project(directory):
         console.fail(f"{directory} is not a valid replik project")
@@ -167,6 +182,29 @@ def build(directory, script, final_docker_exec_command):
             docker_exec_command += f"-v {path}:/home/user/{bn} "
         else:
             console.warning(f"could not map {path}")
+            
+    if len(extra_paths) > 0:
+        # extra paths are provided as .json
+        with open(extra_paths) as f:
+            extra_paths = json.load(f)
+            # [
+            #    {
+            #        "dir": "/path/to/folder",
+            #        "alias": "alias_inside_container"
+            #    }
+            # ]
+            for path_entry in extra_paths:
+                path = path_entry['dir']
+                if not isdir(path):
+                    path = join(directory, path)
+                
+                alias = path_entry['alias']
+                if isdir(path):
+                    console.success(f"map {path}")
+                    docker_exec_command += f"-v {path}:/home/user/{alias} "
+                else:
+                    console.warning(f"could not map {path}")
+            
     docker_exec_command += f"--rm -it replik/{tag} "
     docker_exec_command += final_docker_exec_command
     call(docker_exec_command, shell=True)

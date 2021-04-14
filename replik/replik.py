@@ -184,6 +184,8 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
             console.warning(f"could not map {path}")
             
     if len(extra_paths) > 0:
+        if not isfile(extra_paths):
+            extra_paths = join(directory, extra_paths)
         # extra paths are provided as .json
         with open(extra_paths) as f:
             extra_paths = json.load(f)
@@ -194,10 +196,7 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
             #    }
             # ]
             for path_entry in extra_paths:
-                path = path_entry['dir']
-                if not isdir(path):
-                    path = join(directory, path)
-                
+                path = path_entry['dir']   
                 alias = path_entry['alias']
                 if isdir(path):
                     console.success(f"map {path}")

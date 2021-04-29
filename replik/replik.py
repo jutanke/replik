@@ -13,6 +13,7 @@ from typing import Dict
 import click
 
 import replik.console as console
+import replik.replik_scheduler as sched
 
 
 @click.command()
@@ -20,7 +21,8 @@ import replik.console as console
 @click.argument("tool")
 @click.option("--script", default="demo_script.py")
 @click.option("--extra_paths", default="")
-def replik(directory, tool, script, extra_paths):
+@click.option("--sid", default="")
+def replik(directory, tool, script, extra_paths, sid):
     """
     :param extra_paths: path to file that contains extra paths
         [
@@ -35,6 +37,12 @@ def replik(directory, tool, script, extra_paths):
         init(directory)
     elif tool == "run":
         run(directory, script, extra_paths)
+    elif tool == "schedule":
+        schedule(directory, script, extra_paths)
+    elif tool == "unschedule":
+        sched.unschedule(sid)
+    elif tool == "schedule-info":
+        sched.info()
     elif tool == "help":
         help(directory)
     elif tool == "enter":
@@ -58,12 +66,27 @@ def check(directory):
             console.fail(f"\t{path}")
 
 
+def run(directory, script, extra_paths):
+    build(
+        directory,
+        script,
+        final_docker_exec_command="/bin/bash /home/user/run.sh",
+        extra_paths=extra_paths,
+    )
+
+
 def enter(directory, script):
     build(directory, script, final_docker_exec_command="/bin/bash")
 
 
-def run(directory, script, extra_paths):
-    build(directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh", extra_paths=extra_paths)
+def schedule(directory, script, extra_paths):
+    build(
+        directory,
+        script,
+        final_docker_exec_command="/bin/bash /home/user/run.sh",
+        extra_paths=extra_paths,
+        scheduler_id=sched.generate_id(directory, script),
+    )
 
 
 def get_data_paths(directory):
@@ -88,7 +111,9 @@ def get_data_paths(directory):
     return data
 
 
-def build(directory, script, final_docker_exec_command, extra_paths=""):
+def build(
+    directory, script, final_docker_exec_command, extra_paths="", scheduler_id=""
+):
     """
     :param extra_paths: path to file that contains extra paths
         [
@@ -97,6 +122,7 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
                 "alias": "alias_inside_container"
             }
         ]
+    :param scheduler_id: if not empty this id uniquely identifies this process
     """
     if not is_replik_project(directory):
         console.fail(f"{directory} is not a valid replik project")
@@ -166,7 +192,7 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
     docker_exec_command = 'docker run --privileged --shm-size="'
     docker_exec_command += docker_mem + '" '
 
-    if sys.platform != "darwin":
+    if sys.platform != "darwin" and len(scheduler_id) == 0:
         # add gpu
         docker_exec_command += "--gpus all "
     docker_exec_command += f"-v {src_dir}:/home/user/{name} "
@@ -182,7 +208,7 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
             docker_exec_command += f"-v {path}:/home/user/{bn} "
         else:
             console.warning(f"could not map {path}")
-            
+
     if len(extra_paths) > 0:
         if not isfile(extra_paths):
             extra_paths = join(directory, extra_paths)
@@ -196,22 +222,32 @@ def build(directory, script, final_docker_exec_command, extra_paths=""):
             #    }
             # ]
             for path_entry in extra_paths:
-                path = path_entry['dir']   
-                alias = path_entry['alias']
+                path = path_entry["dir"]
+                alias = path_entry["alias"]
                 if isdir(path):
                     console.success(f"map {path}")
                     docker_exec_command += f"-v {path}:/home/user/{alias} "
                 else:
                     console.warning(f"could not map {path}")
-            
-    docker_exec_command += f"--rm -it replik/{tag} "
-    docker_exec_command += final_docker_exec_command
-    call(docker_exec_command, shell=True)
+
+    final_docker_exec_command = f"--rm -it replik/{tag} " + final_docker_exec_command
+    if len(scheduler_id) > 0:
+        # IF scheduled we need to potentially delay here!
+        sched.schedule(
+            directory,
+            script,
+            scheduler_id,
+            docker_exec_command,
+            final_docker_exec_command,
+        )
+    else:
+        # docker_exec_command += f"--rm -it replik/{tag} "
+        docker_exec_command += final_docker_exec_command
+        call(docker_exec_command, shell=True)
 
 
 def help(directory):
-    """ help info
-    """
+    """help info"""
     replik_dir = os.getcwd()
     console.info("*** replik ***")
     console.write(f"replik path: {replik_dir}\n")
@@ -227,8 +263,7 @@ def is_replik_project(directory: str) -> bool:
 
 
 def get_replik_settings(directory: str) -> Dict:
-    """
-    """
+    """"""
     if not is_replik_project(directory):
         console.fail(f"Directory {directory} is no replik project")
         exit(0)  # exit program
@@ -238,8 +273,7 @@ def get_replik_settings(directory: str) -> Dict:
 
 
 def init(directory):
-    """ initialize a repository
-    """
+    """initialize a repository"""
     replik_dir = os.getcwd()
     templates_dir = join(replik_dir, "templates")
 

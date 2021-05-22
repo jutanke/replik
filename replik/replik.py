@@ -6,7 +6,7 @@ import os
 import sys
 from os import makedirs, remove
 from os.path import basename, isdir, isfile, join
-from shutil import copyfile
+from shutil import copyfile, move
 from subprocess import call
 from typing import Dict
 
@@ -64,6 +64,19 @@ def check(directory):
             console.success(f"\t{path}")
         else:
             console.fail(f"\t{path}")
+
+    handle_broken_project(directory)
+
+
+def handle_broken_project(directory):
+    if is_broken_project(directory):
+        console.warning(
+            "\nThis repo seems to be broken (interrupt during Docker build)"
+        )
+        fname_bkp = join(directory, "docker/Dockerfile.bkp")
+        fname_broken = join(directory, "docker/Dockerfile")
+        move(fname_bkp, fname_broken)
+        console.success("\tfixed!\n")
 
 
 def run(directory, script, extra_paths):
@@ -127,6 +140,8 @@ def build(
     if not is_replik_project(directory):
         console.fail(f"{directory} is not a valid replik project")
         exit(0)
+
+    handle_broken_project(directory)
 
     # backup the "base" Dockerfile
     dockerdir = join(directory, "docker")
@@ -254,6 +269,11 @@ def help(directory):
 
     if is_replik_project(directory):
         check(directory)
+
+
+def is_broken_project(directory: str) -> bool:
+    """"""
+    return isfile(join(directory, "docker/Dockerfile.bkp"))
 
 
 def is_replik_project(directory: str) -> bool:

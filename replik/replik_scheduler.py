@@ -165,6 +165,7 @@ def unschedule(scheduler_id):
                         call(f"docker kill {scheduler_id}", shell=True)
                         os.remove(fname)
 
+                    lock.unlock(REPLIK_SHEDULE_FOLDER, scheduler_id)
                     exit()  # exit successfully
             delay_seconds = random.uniform(0.3, 1.4)
             time.sleep(delay_seconds)

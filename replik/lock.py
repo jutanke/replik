@@ -24,6 +24,7 @@ def unlock(path, uid):
 def is_locked(path, uid):
     """path is locked if it contains .lock"""
     is_locked = False
+    now = time.time()
     for f in listdir(path):
         fname = join(path, f)
         if uid in fname:
@@ -33,7 +34,7 @@ def is_locked(path, uid):
             with open(fname, "r") as f:
                 created = float(f.readline())
 
-            elapsed_mins = sec2mins(time.time() - created)
+            elapsed_mins = sec2mins(now - created)
             if elapsed_mins < 0.5:
                 is_locked = True
             else:

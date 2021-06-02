@@ -162,7 +162,10 @@ def unschedule(scheduler_id):
                     if scheduler_id in get_names_of_running_docker_containers():
                         fname = join(REPLIK_SHEDULE_FOLDER, f"{scheduler_id}.json")
                         assert isfile(fname)
-                        call(f"docker kill {scheduler_id}", shell=True)
+                        try:
+                            call(f"docker kill {scheduler_id}", shell=True)
+                        except:
+                            pass
                         os.remove(fname)
 
                     lock.unlock(REPLIK_SHEDULE_FOLDER, scheduler_id)
@@ -239,6 +242,11 @@ def schedule(
                             place_process_onto_staging(
                                 directory, script, scheduler_id, settings
                             )
+                            fname = join(REPLIK_SHEDULE_FOLDER, f"{scheduler_id}.json")
+                            os.remove(fname)
+                            time.sleep(
+                                60
+                            )  # if a job is interrupted wait at least for 1 minute
                 else:
                     place_process_onto_staging(
                         directory, script, scheduler_id, settings

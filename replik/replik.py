@@ -35,6 +35,8 @@ def replik(directory, tool, script, extra_paths, sid):
     print("\n")
     if tool == "init":
         init(directory)
+    elif tool == "init-simple":
+        init(directory, simple=True)
     elif tool == "run":
         run(directory, script, extra_paths)
     elif tool == "schedule":
@@ -292,7 +294,7 @@ def get_replik_settings(directory: str) -> Dict:
         return json.load(f)
 
 
-def init(directory):
+def init(directory, simple=False):
     """initialize a repository"""
     replik_dir = os.getcwd()
     templates_dir = join(replik_dir, "templates")
@@ -340,10 +342,11 @@ def init(directory):
             console.write("Do you want to add additional data directories? [y/N]")
             add_data = input()
 
-    project_dir = join(directory, project_name)
-    makedirs(project_dir)
-    script_dir = join(project_dir, "scripts")
-    makedirs(script_dir)
+    if not simple:
+        project_dir = join(directory, project_name)
+        makedirs(project_dir)
+        script_dir = join(project_dir, "scripts")
+        makedirs(script_dir)
     docker_dir = join(directory, "docker")
     makedirs(docker_dir)
 
@@ -363,8 +366,9 @@ def init(directory):
     copyfile(join(templates_dir, "Dockerfile"), join(docker_dir, "Dockerfile"))
     dockerignore_tar = join(docker_dir, ".dockerignore")
     copyfile(join(templates_dir, "dockerignore"), dockerignore_tar)
-    demoscript_tar = join(script_dir, "demo_script.py")
-    copyfile(join(templates_dir, "demo_script.py"), demoscript_tar)
+    if not simple:
+        demoscript_tar = join(script_dir, "demo_script.py")
+        copyfile(join(templates_dir, "demo_script.py"), demoscript_tar)
     copy2tar("hook_post_useradd", templates_dir, join(directory, "docker"))
     copy2tar("hook_pre_useradd", templates_dir, join(directory, "docker"))
     copy2tar("bashhook.sh", templates_dir, join(directory, "docker"))

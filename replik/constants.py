@@ -1,6 +1,8 @@
 import pwd
 import os
+import json
 from os.path import join, isfile
+from typing import Dict
 
 FORBIDDEN_CHARACTERS = [
     " ",
@@ -33,6 +35,10 @@ FORBIDDEN_CHARACTERS = [
 ]
 
 
+def get_dockerdir(directory: str) -> str:
+    return join(directory, "docker")
+
+
 def replik_root_file(directory: str) -> str:
     """
     {root}/.replik
@@ -53,3 +59,13 @@ def get_username():
 def is_broken_project(directory: str) -> bool:
     """"""
     return isfile(join(directory, "docker/Dockerfile.bkp"))
+
+
+def get_replik_settings(directory: str) -> Dict:
+    """"""
+    if not is_replik_project(directory):
+        console.fail(f"Directory {directory} is no replik project")
+        exit(0)  # exit program
+    replik_fname = join(directory, ".replik")
+    with open(replik_fname, "r") as f:
+        return json.load(f)

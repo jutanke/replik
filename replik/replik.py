@@ -13,6 +13,7 @@ import click
 
 import replik.console as console
 import replik.init as init
+import replik.run as run
 
 
 @click.command()
@@ -27,6 +28,10 @@ def replik(directory, tool, script, extra_paths, sid):
         init.execute(directory, simple=False)
     elif tool == "init-simple":
         init.execute(directory, simple=True)
+    elif tool == "run":
+        run.execute(directory, script, is_scheduled=False)
+    else:
+        console.warning(f"no command '{tool}'")
 
 
 if __name__ == "__main__":

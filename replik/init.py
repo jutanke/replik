@@ -1,13 +1,14 @@
 import os
 import json
 from os.path import join
+from shutil import copyfile
+
 import replik.console as console
 import replik.constants as const
 import replik.utils as utils
-from shutil import copyfile
 
 
-def execute(directory, simple=False):
+def execute(directory: str, simple=False):
     """pass"""
     replik_dir = os.getcwd()
     templates_dir = join(replik_dir, "templates")
@@ -39,6 +40,7 @@ def execute(directory, simple=False):
         "docker_shm": "32g",
         "memory": "12g",
         "cpus": "8",
+        "gpus": "0",
         "is_simple": simple,
     }
 

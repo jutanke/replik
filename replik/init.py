@@ -1,8 +1,10 @@
 import os
+import json
 from os.path import join
 import replik.console as console
 import replik.constants as const
-from shutil import copyfile, move
+import replik.utils as utils
+from shutil import copyfile
 
 
 def execute(directory, simple=False):
@@ -23,15 +25,13 @@ def execute(directory, simple=False):
     if len(project_name) == 0:
         console.fail("Name must be at least one character long!")
         exit(0)
+    for forbidden_string in const.FORBIDDEN_CHARACTERS:
+        if forbidden_string in project_name:
+            console.fail(f"Name must not contain '{forbidden_string}'!")
+            exit(0)
     print("\n")
 
     username = const.get_username().lower().replace(" ", "_")
-
-    if not simple:
-        project_dir = join(directory, project_name)
-        os.makedirs(project_dir)
-        script_dir = join(project_dir, "scripts")
-        os.makedirs(script_dir)
 
     info = {
         "name": project_name,
@@ -39,6 +39,7 @@ def execute(directory, simple=False):
         "docker_shm": "32g",
         "memory": "12g",
         "cpus": "8",
+        "is_simple": simple,
     }
 
     docker_dir = join(directory, "docker")
@@ -46,10 +47,28 @@ def execute(directory, simple=False):
 
     # handle .gitignore
     gitignore_file = join(directory, ".gitignore")
+    with open(gitignore_file, "a+") as f:
+        f.write("output/\n")
+        f.write("paths.json\n")
 
-    print(info)
+    if not simple:
+        # if not "simple": create additional boilerplate
+        project_dir = join(directory, project_name)
+        os.makedirs(project_dir)
+        script_dir = join(project_dir, "scripts")
+        os.makedirs(script_dir)
+        utils.copy2target("demo_script.py", templates_dir, script_dir)
 
-    # print("\n\n")
-    # # print("init", directory, simple)
-    # print(username)
-    # print(replik_dir)
+        output_dir = join(directory, "output")
+        makedirs(output_dir)
+
+    # copy docker files
+    utils.copy2target("hook_post_useradd", templates_dir, docker_dir)
+    utils.copy2target("hook_pre_useradd", templates_dir, docker_dir)
+    utils.copy2target("bashhook.sh", templates_dir, docker_dir)
+    utils.copy2target("Dockerfile", templates_dir, docker_dir)
+    dockerignore_tar = join(docker_dir, ".dockerignore")
+    copyfile(join(templates_dir, "dockerignore"), dockerignore_tar)
+
+    with open(replik_fname, "w") as f:
+        json.dump(info, f, indent=4, sort_keys=True)

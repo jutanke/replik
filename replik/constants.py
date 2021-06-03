@@ -2,6 +2,36 @@ import pwd
 import os
 from os.path import join, isfile
 
+FORBIDDEN_CHARACTERS = [
+    " ",
+    "%",
+    "^",
+    "&",
+    "/",
+    "\\",
+    ".",
+    "?",
+    "$",
+    "#",
+    "'",
+    '"',
+    "!",
+    ",",
+    ".",
+    ":",
+    ";",
+    "*",
+    "(",
+    ")",
+    "[",
+    "]",
+    "-",
+    "+",
+    "=",
+    "{",
+    "}",
+]
+
 
 def replik_root_file(directory: str) -> str:
     """

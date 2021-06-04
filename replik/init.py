@@ -52,6 +52,7 @@ def execute(directory: str, simple=False):
     gitignore_file = join(directory, ".gitignore")
     with open(gitignore_file, "a+") as f:
         f.write("output/\n")
+        f.write(".cache/\n")
         f.write(".replik_paths.json\n")
 
     if not simple:
@@ -63,7 +64,10 @@ def execute(directory: str, simple=False):
         utils.copy2target("demo_script.py", templates_dir, script_dir)
 
         output_dir = join(directory, "output")
-        makedirs(output_dir)
+        os.makedirs(output_dir)
+
+        cache_dir = join(directory, ".cache")
+        os.makedirs(cache_dir)
 
         # default paths
         with open(paths.get_simple_path_fname(directory), "w") as f:

@@ -1,8 +1,10 @@
-import replik.constants as const
-import replik.build as build
 from subprocess import call
 from typing import Dict
 from os.path import join
+
+import replik.constants as const
+import replik.build as build
+from replik.paths import load_all_extra_paths
 
 
 def set_shm_cpu_memory(info: Dict):
@@ -25,6 +27,9 @@ def set_all_paths(directory: str, info: Dict):
 
     dockerdir = const.get_dockerdir(directory)
     docker_exec_command += f"-v {dockerdir}:/home/user/docker "
+
+    for path_host, path_container in load_all_extra_paths(directory):
+        docker_exec_command += f"-v {path_host}:{path_container} "
 
     return docker_exec_command
 

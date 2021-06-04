@@ -14,6 +14,7 @@ import click
 import replik.console as console
 import replik.init as init
 import replik.run as run
+import replik.info as info
 
 
 def demask_script(script):
@@ -42,6 +43,8 @@ def replik(directory, tool, script, extra_paths, sid):
         )
     elif tool == "enter":
         run.execute(directory, script, final_docker_exec_command="/bin/bash")
+    elif tool == "info":
+        info.execute(directory)
     else:
         console.warning(f"no command '{tool}'")
 

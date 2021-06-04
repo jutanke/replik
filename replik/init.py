@@ -43,6 +43,7 @@ def execute(directory: str, simple=False):
         "cpus": "8",
         "gpus": "0",
         "is_simple": simple,
+        "replik_version": const.VERSION,
     }
 
     docker_dir = join(directory, "docker")

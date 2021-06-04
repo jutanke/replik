@@ -4,6 +4,9 @@ import json
 from os.path import join, isfile
 from typing import Dict
 
+
+VERSION = "0.5.0"
+
 FORBIDDEN_CHARACTERS = [
     " ",
     "%",

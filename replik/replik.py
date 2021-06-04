@@ -16,6 +16,10 @@ import replik.init as init
 import replik.run as run
 
 
+def demask_script(script):
+    return script.replace("#", " ")
+
+
 @click.command()
 @click.argument("directory")
 @click.argument("tool")
@@ -24,12 +28,20 @@ import replik.run as run
 @click.option("--sid", default="")
 def replik(directory, tool, script, extra_paths, sid):
     """"""
+    script = demask_script(script)
+
     if tool == "init":
         init.execute(directory, simple=False)
     elif tool == "init-simple":
         init.execute(directory, simple=True)
     elif tool == "run":
-        run.execute(directory, script, is_scheduled=False)
+        run.execute(
+            directory,
+            script,
+            final_docker_exec_command="/bin/bash /home/user/run.sh",
+        )
+    elif tool == "enter":
+        run.execute(directory, script, final_docker_exec_command="/bin/bash")
     else:
         console.warning(f"no command '{tool}'")
 

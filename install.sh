@@ -19,7 +19,12 @@ echo "# >> replik (start)" >> $RC
 echo "replik(){" >> $RC
 echo '    CURDIR=$PWD' >> $RC
 echo "    REPDIR=$DIR" >> $RC
-echo '    cd $REPDIR && python -m replik.replik $CURDIR $@' >> $RC
+echo '    if [ "$#" == 1 ]; then' >> $RC
+echo '        cd $REPDIR && python -m replik.replik $CURDIR $1' >> $RC
+echo '    elif [ "$#" == 2 ]; then' >> $RC
+echo "        param2=$(echo $2 | tr ' ' '#')" >> $RC
+echo "        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2" >> $RC
+echo "    fi" >> $RC
 echo '    cd $CURDIR' >> $RC
 echo "}" >> $RC
 echo "# << replik (end)" >> $RC

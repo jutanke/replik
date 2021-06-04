@@ -6,6 +6,7 @@ from shutil import copyfile
 import replik.console as console
 import replik.constants as const
 import replik.utils as utils
+import replik.paths as paths
 
 
 def execute(directory: str, simple=False):
@@ -51,7 +52,7 @@ def execute(directory: str, simple=False):
     gitignore_file = join(directory, ".gitignore")
     with open(gitignore_file, "a+") as f:
         f.write("output/\n")
-        f.write("paths.json\n")
+        f.write(".replik_paths.json\n")
 
     if not simple:
         # if not "simple": create additional boilerplate
@@ -63,6 +64,10 @@ def execute(directory: str, simple=False):
 
         output_dir = join(directory, "output")
         makedirs(output_dir)
+
+        # default paths
+        with open(paths.get_simple_path_fname(directory), "w") as f:
+            json.dump(["output", ".cache"], f, indent=4, sort_keys=True)
 
     # copy docker files
     utils.copy2target("hook_post_useradd", templates_dir, docker_dir)

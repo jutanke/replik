@@ -19,8 +19,7 @@ RUN apt-get install -y build-essential \
     libavcodec-dev libavformat-dev libswscale-dev libdc1394-22-dev \
     libxine2-dev libv4l-dev \
     liblmdb-dev libleveldb-dev libsnappy-dev \
-    mesa-utils and libgl1-mesa-glx x11-apps eog \
-    vim tmux curl
+    mesa-utils and libgl1-mesa-glx curl
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7 /usr/local/cuda/lib64/libcudnn.so.7
 RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so /usr/local/cuda/lib64/libcudnn.so

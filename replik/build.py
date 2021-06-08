@@ -22,6 +22,7 @@ def execute(directory: str, script: str, info: Dict):
     name = info["name"]
     docker_mem = info["docker_shm"]
     is_simple = info["is_simple"]
+    stdout_to_file = info["stdout_to_file"]
 
     # -- (1) construct Dockerfile
     move(dockerfile, dockerfile_bkp)
@@ -47,17 +48,23 @@ def execute(directory: str, script: str, info: Dict):
 
         # add the script call
         D.write("\n")
+
+        pipe = ""
+        if stdout_to_file:
+            outfile = const.get_stdout_file_in_container(directory)
+            pipe = f" &>{outfile}"
+
         if is_simple:
             D.write(
                 'RUN echo "source ~/.bashrc\\n'
-                + f'cd /home/user/{name} && bash {script}"'
+                + f'cd /home/user/{name} && bash {script}{pipe}"'
                 + " >> /home/user/run.sh"
             )
         else:
             D.write(
                 'RUN echo "source ~/.bashrc\\n'
-                + f'cd /home/user/{name}/scripts && python {script}"'
-                + " >> /home/user/run.sh"
+                + f'cd /home/user/{name}/scripts && python {script}{pipe}"'
+                + f" >> /home/user/run.sh"
             )
 
         # add startup bash hook

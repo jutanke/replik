@@ -31,6 +31,11 @@ def set_all_paths(directory: str, info: Dict):
     for path_host, path_container in load_all_extra_paths(directory):
         docker_exec_command += f"-v {path_host}:{path_container} "
 
+    if info["stdout_to_file"]:
+        # map the .replik directory to the container
+        replik_dir = const.get_local_replik_dir(directory)
+        docker_exec_command += f"-v {replik_dir}:/home/user/.replik "
+
     return docker_exec_command
 
 

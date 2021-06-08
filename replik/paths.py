@@ -9,7 +9,7 @@ def get_simple_path_fname(directory: str):
     """
     ["/path/to/file1", "/path/to/file2", ...]
     """
-    return join(directory, ".replik_paths.json")
+    return join(directory, ".replik/paths.json")
 
 
 def load_all_extra_paths(directory: str) -> List[Tuple[str, str]]:

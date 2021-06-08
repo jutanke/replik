@@ -1,6 +1,6 @@
 import os
 import json
-from os.path import join
+from os.path import join, isdir
 from shutil import copyfile
 
 import replik.console as console
@@ -39,12 +39,17 @@ def execute(directory: str, simple=False):
         "name": project_name,
         "tag": f"{username}/replik_{project_name}",
         "docker_shm": "32g",
-        "memory": "12g",
+        "memory": "32g",
         "cpus": "8",
         "gpus": "0",
         "is_simple": simple,
         "replik_version": const.VERSION,
+        "stdout_to_file": True,
     }
+
+    os.makedirs(const.get_local_replik_dir(directory))
+
+    os.makedirs(join(const.get_local_replik_dir(directory), "logs"))
 
     docker_dir = join(directory, "docker")
     os.makedirs(docker_dir)

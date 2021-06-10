@@ -44,7 +44,7 @@ def execute(directory: str, simple=False):
         "gpus": "0",
         "is_simple": simple,
         "replik_version": const.VERSION,
-        "stdout_to_file": True,
+        "stdout_to_file": False,
     }
 
     os.makedirs(const.get_local_replik_dir(directory))

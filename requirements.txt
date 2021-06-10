@@ -1,1 +1,2 @@
 Click>=8.0
+pyzmq

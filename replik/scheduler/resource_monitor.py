@@ -18,9 +18,9 @@ def get_system_cpu_count():
 class Resources:
     def __init__(self, info):
         super().__init__()
-        self.cpus = info["cpus"]
-        self.gpus = info["gpus"]
-        self.memory = info["memory"]
+        self.cpus = int(info["cpus"])
+        self.gpus = int(info["gpus"])
+        self.memory = int(info["memory"].replace("g", ""))
 
 
 class FreeResources:
@@ -84,11 +84,10 @@ class ResourceMonitor:
     def remove_process(self, process):
         """Remove a process"""
         assert process.uid in self.current_processes
-        for gpuid in gpus:
+        for gpuid in range(len(self.gpus)):
             if self.gpus[gpuid] == process.uid:
                 self.gpus[gpuid] = None
         del self.current_processes[process.uid]
-        self.available_ids.append(int(process.uid))
 
     def get_current_free_resources(self) -> FreeResources:
         """"""

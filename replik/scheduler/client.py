@@ -7,11 +7,7 @@ A client needs to provide the following resources:
 import zmq
 import signal
 from time import time
-from replik.scheduler.message import (
-    get_is_alive_msg,
-    get_request_uid_msg,
-    get_process_msg,
-)
+from replik.scheduler.message import get_is_alive_msg, get_request_uid_msg
 import replik.console as console
 
 context = zmq.Context()
@@ -29,6 +25,8 @@ def send_message_with_timeout(socket, msg):
     def term_handler():
         raise Exception("no server")
 
+    signal.signal(signal.SIGALRM, term_handler)
+    signal.alarm(5)
     failed = False
     try:
         socket.send_json(msg)
@@ -49,18 +47,17 @@ def check_server_status():
     return not timeout
 
 
-def request_uid():
-    timeout, msg = send_message_with_timeout(socket, get_request_uid_msg())
+def request_uid(info):
+    timeout, msg = send_message_with_timeout(socket, get_request_uid_msg(info))
     if timeout:
         console.fail("Could not request uid: Timeout!")
         exit(0)
-    print(msg)
-    return msg["uid"]
+    return msg["uid"], msg["mark"]
 
 
-def request_scheduling(uid, info):
-    msg = get_process_msg(uid, info)
+# def request_scheduling(uid, info):
+#     msg = get_process_msg(uid, info)
 
-    socket.send_json(msg)
-    result = socket.recv_json()
-    print("res", result)
+#     socket.send_json(msg)
+#     result = socket.recv_json()
+#     print("res", result)

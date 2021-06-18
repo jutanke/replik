@@ -1,8 +1,15 @@
+import sys
+import json
+import time
 import replik.console as console
 import replik.scheduler.client as client
 import replik.constants as const
+import replik.run as RUN
+import replik.build as build
 from typing import List
 from replik.scheduler.resource_monitor import Resources
+from os.path import isfile
+from subprocess import call
 
 
 class ReplikProcess:
@@ -15,10 +22,8 @@ class ReplikProcess:
         self.maximal_running_hours = (
             info["maximal_running_hours"] if "maximal_running_hours" in info else 12
         )
-        self.total_running_time_s = 0
         self.current_running_time_s = 0
         self.current_waiting_time_s = 0
-        self.total_waiting_time_s = 0
         self.resources = Resources(info)
 
     def __repr__(self):
@@ -35,9 +40,6 @@ class ReplikProcess:
 
     def waiting_time_in_h(self):
         return self.current_waiting_time_s / 3600
-
-    def total_waiting_time_in_h(self):
-        return self.total_waiting_time_s / 3600
 
     def must_be_killed(self):
         currently_running_h = self.running_time_in_h()
@@ -69,11 +71,51 @@ def rank_processes_that_can_be_killed(
     return must_be_killed + may_be_killed
 
 
-def execute(directory: str):
-    if not client.check_server_status():
-        exit(0)
+def execute(directory: str, script: str, final_docker_exec_command: str):
+    if const.is_replik_project(directory):
+        # -- build the dockerfile --
+        info = const.get_replik_settings(directory)
+        build.execute(directory, script, info)
 
-    uid = client.request_uid()
-    info = const.get_replik_settings(directory)
+        # -- start actual scheduling --
 
-    client.request_scheduling(uid, info)
+        console.info("start scheduling...")
+
+        if not client.check_server_status():
+            console.fail("exiting")
+            sys.exit(1)
+
+        info = const.get_replik_settings(directory)
+        tag = info["tag"]
+        uid, mark_file = client.request_uid(info)
+
+        console.info(f"schedule as {uid}")
+
+        while True:
+            time.sleep(3)
+            if isfile(mark_file):
+                # if the file exists the server allowed the scheduling!
+                with open(mark_file, "r") as f:
+                    mark = json.load(f)
+                    gpus = mark["gpus"]
+
+                docker_exec_command = "docker run" + RUN.set_shm_cpu_memory(info)
+                if len(gpus) > 0:
+                    docker_exec_command += '--gpus  "device='
+                    for i, gpuid in enumerate(gpus):
+                        if i > 0:
+                            docker_exec_command += ","
+                        docker_exec_command += str(gpuid)
+                    docker_exec_command += '" '
+
+                docker_exec_command += RUN.set_all_paths(directory, info)
+                docker_exec_command += f"--rm -it {tag} " + final_docker_exec_command
+
+                out = call(docker_exec_command, shell=True)
+                if out == 0:
+                    console.success(f"finished {uid}!")
+                    exit(0)
+
+        # client.request_scheduling(uid, info)
+    else:
+        console.warning("Not a valid replik repository")

@@ -47,7 +47,9 @@ def replik(directory, tool, script, extra_paths, sid):
     elif tool == "info":
         info.execute(directory)
     elif tool == "schedule":
-        schedule.execute(directory)
+        schedule.execute(
+            directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh"
+        )
     else:
         console.warning(f"no command '{tool}'")
 

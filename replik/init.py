@@ -42,6 +42,7 @@ def execute(directory: str, simple=False):
         "memory": "32g",
         "cpus": "8",
         "gpus": "0",
+        "minimum_required_running_hours": 3,
         "is_simple": simple,
         "replik_version": const.VERSION,
         "stdout_to_file": False,

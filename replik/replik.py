@@ -15,6 +15,7 @@ import replik.console as console
 import replik.init as init
 import replik.run as run
 import replik.info as info
+import replik.scheduler.schedule as schedule
 
 
 def demask_script(script):
@@ -45,6 +46,8 @@ def replik(directory, tool, script, extra_paths, sid):
         run.execute(directory, script, final_docker_exec_command="/bin/bash")
     elif tool == "info":
         info.execute(directory)
+    elif tool == "schedule":
+        schedule.execute(directory)
     else:
         console.warning(f"no command '{tool}'")
 

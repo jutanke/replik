@@ -1,0 +1,1 @@
+python -m replik.scheduler.server $1

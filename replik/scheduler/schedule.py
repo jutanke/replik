@@ -10,6 +10,13 @@ from typing import List
 from replik.scheduler.resource_monitor import Resources
 from os.path import isfile
 from subprocess import call
+from enum import IntEnum
+
+
+class Place:
+    NOT_PLACED = 0
+    STAGING = 1
+    RUNNING = 2
 
 
 class ReplikProcess:
@@ -18,13 +25,18 @@ class ReplikProcess:
         self.info = info
         self.uid = uid
         self.is_running = False
-        self.minimum_required_running_hours = info["minimum_required_running_hours"]
+        self.minimum_required_running_hours = (
+            info["minimum_required_running_hours"]
+            if "minimum_required_running_hours" in info
+            else 1
+        )
         self.maximal_running_hours = (
             info["maximal_running_hours"] if "maximal_running_hours" in info else 12
         )
-        self.current_running_time_s = 0
-        self.current_waiting_time_s = 0
+        self.staging_started_time = -1
+        self.running_started_time = -1
         self.resources = Resources(info)
+        self.place = Place.NOT_PLACED
 
     def __repr__(self):
         return self.__str__()
@@ -35,38 +47,64 @@ class ReplikProcess:
         waitt = self.waiting_time_in_h()
         return f"({uid}, running for %04.02fh, waiting for %04.02fh)" % (runt, waitt)
 
-    def running_time_in_h(self):
-        return self.current_running_time_s / 3600
+    def running_time_in_h(self, cur_time_in_s=None):
+        if cur_time_in_s is None:
+            cur_time_in_s = time.time()
+        assert self.place == Place.RUNNING
+        running_time_in_s = cur_time_in_s - self.running_started_time
+        return running_time_in_s / 3600
 
-    def waiting_time_in_h(self):
-        return self.current_waiting_time_s / 3600
+    def waiting_time_in_h(self, cur_time_in_s=None):
+        if cur_time_in_s is None:
+            cur_time_in_s = time.time()
+        assert self.place == Place.STAGING
+        waiting_time_in_s = cur_time_in_s - self.staging_started_time
+        return waiting_time_in_s / 3600
 
-    def must_be_killed(self):
-        currently_running_h = self.running_time_in_h()
+    def push_to_running_queue(self, cur_time_in_s=None):
+        if cur_time_in_s is None:
+            cur_time_in_s = time.time()
+        assert self.place != Place.RUNNING, "place: " + str(self.place)
+        self.place = Place.RUNNING
+        self.running_started_time = cur_time_in_s
+        self.staging_started_time = -1
+
+    def push_to_staging_queue(self, cur_time_in_s=None):
+        if cur_time_in_s is None:
+            cur_time_in_s = time.time()
+        assert self.place != Place.STAGING
+        self.place = Place.STAGING
+        self.staging_started_time = cur_time_in_s
+        self.running_started_time = -1
+
+    def must_be_killed(self, cur_time_in_s=None):
+        currently_running_h = self.running_time_in_h(cur_time_in_s)
         return currently_running_h > self.maximal_running_hours
 
-    def may_be_killed(self):
-        currently_running_h = self.running_time_in_h()
+    def may_be_killed(self, cur_time_in_s=None):
+        currently_running_h = self.running_time_in_h(cur_time_in_s)
         return currently_running_h > self.minimum_required_running_hours
 
 
 def rank_processes_that_can_be_killed(
-    running_processes: List[ReplikProcess],
+    running_processes: List[ReplikProcess], current_time_in_s: None
 ) -> List[ReplikProcess]:
     """returns all processes that may be killed!"""
     must_be_killed = []
     may_be_killed = []
 
     for proc in running_processes:
-        if proc.must_be_killed():
+        if proc.must_be_killed(current_time_in_s):
             must_be_killed.append(proc)
-        elif proc.may_be_killed():
+        elif proc.may_be_killed(current_time_in_s):
             may_be_killed.append(proc)
 
     must_be_killed = list(
-        sorted(must_be_killed, key=lambda p: p.current_running_time_s)
+        sorted(must_be_killed, key=lambda p: p.running_time_in_h(current_time_in_s))
     )
-    may_be_killed = list(sorted(may_be_killed, key=lambda p: p.current_running_time_s))
+    may_be_killed = list(
+        sorted(may_be_killed, key=lambda p: p.running_time_in_h(current_time_in_s))
+    )
 
     return must_be_killed + may_be_killed
 

@@ -54,6 +54,12 @@ class FreeResources:
         n_gpu = self.gpu_count - res.gpus
         return mem_gb >= 0 and n_cpu >= 0 and n_gpu >= 0
 
+    def __str__(self):
+        return f"cpu {self.cpu_count}, gpu: {self.gpu_count}, mem: {self.mem_gb}"
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class ResourceMonitor:
     def __init__(self, cpu_count: int, gpu_count: int, mem_gb: int, memory_factor=0.80):
@@ -112,10 +118,13 @@ class ResourceMonitor:
         # (2) try to schedule all processes that are in the
         # waiting queue
         procs_to_schedule = []
+        procs_to_staging = []
         for proc in staging:
             if available_resources.fits(proc.resources):
                 available_resources = available_resources.subtract(proc.resources)
                 procs_to_schedule.append(proc)
+            else:
+                procs_to_staging.append(proc)
 
         # (3) check if some of the old processes still fit... if so we will
         # just let them be and let them KEEP their current GPUs!
@@ -125,6 +134,7 @@ class ResourceMonitor:
                 available_resources = available_resources.subtract(proc.resources)
             else:
                 procs_to_kill.append(proc)
+        procs_to_staging = procs_to_staging + procs_to_kill
 
         # (4) clean-up the gpu assignments
         gpus = deepcopy(self.gpus)
@@ -138,12 +148,13 @@ class ResourceMonitor:
         for proc in procs_to_schedule:
             n_gpus = proc.resources.gpus
             proc_gpus = []
-            for _ in range(n_gpus):
-                for i in range(len(gpus)):
-                    if gpus[i] == None:
-                        gpus[i] = proc.uid
-                        proc_gpus.append(i)
+            for i in range(len(gpus)):
+                if gpus[i] == None:
+                    proc_gpus.append(i)
+                    gpus[i] = proc.uid
+                    if len(proc_gpus) == n_gpus:
+                        break
             assert len(proc_gpus) == n_gpus
             procs_to_schedule_.append((proc, proc_gpus))
 
-        return procs_to_kill, procs_to_schedule_
+        return procs_to_kill, procs_to_schedule_, procs_to_staging

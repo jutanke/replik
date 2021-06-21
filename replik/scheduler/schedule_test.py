@@ -14,7 +14,7 @@ class TestScheduling(unittest.TestCase):
             },
             uid="00001",
         )
-        proc1.current_running_time_s = 10000
+        proc1.push_to_running_queue(cur_time_in_s=0)
 
         proc2 = SCHED.ReplikProcess(
             info={
@@ -25,7 +25,7 @@ class TestScheduling(unittest.TestCase):
             },
             uid="00002",
         )
-        proc2.current_running_time_s = 1000
+        proc2.push_to_running_queue(cur_time_in_s=500)
 
         proc3 = SCHED.ReplikProcess(
             info={
@@ -36,11 +36,15 @@ class TestScheduling(unittest.TestCase):
             },
             uid="00003",
         )
-        proc3.current_running_time_s = 100
+        proc3.push_to_running_queue(cur_time_in_s=1000)
+
+        cur_time = 4000
 
         running_processes = [proc1, proc2, proc3]
 
-        kill_proc = SCHED.rank_processes_that_can_be_killed(running_processes)
+        kill_proc = SCHED.rank_processes_that_can_be_killed(
+            running_processes, current_time_in_s=cur_time
+        )
         self.assertEqual(len(kill_proc), 1)
         self.assertEqual(kill_proc[0].uid, "00001")
 

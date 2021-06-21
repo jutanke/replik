@@ -48,11 +48,14 @@ class ReplikProcess:
         return f"({uid}, running for %04.02fh, waiting for %04.02fh)" % (runt, waitt)
 
     def running_time_in_h(self, cur_time_in_s=None):
+        return self.running_time_in_s(cur_time_in_s) / 3600
+
+    def running_time_in_s(self, cur_time_in_s=None):
         if cur_time_in_s is None:
             cur_time_in_s = time.time()
         assert self.place == Place.RUNNING
         running_time_in_s = cur_time_in_s - self.running_started_time
-        return running_time_in_s / 3600
+        return running_time_in_s
 
     def waiting_time_in_h(self, cur_time_in_s=None):
         if cur_time_in_s is None:

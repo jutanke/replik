@@ -46,6 +46,10 @@ def running_files_dir_for_scheduler() -> str:
     return "/srv/replik_schedule/running"
 
 
+def staging_files_dir_for_scheduler() -> str:
+    return "/srv/replik_schedule/staging"
+
+
 def get_dockerdir(directory: str) -> str:
     return join(directory, "docker")
 

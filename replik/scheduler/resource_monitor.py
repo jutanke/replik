@@ -22,6 +22,12 @@ class Resources:
         self.gpus = int(info["gpus"])
         self.memory = int(info["memory"].replace("g", ""))
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"(cpu:{self.cpus}, gpu:{self.gpus}, mem:{self.memory})"
+
 
 class FreeResources:
     def __init__(self, cpu_count: int, gpu_count: int, mem_gb: int):

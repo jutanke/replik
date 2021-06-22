@@ -151,11 +151,6 @@ def server(n_gpus: int):
     global FREE_IDS, KILLING_QUEUE, STAGING_QUEUE, RUNNING_QUEUE, USED_IDS
     console.info("\n* * * START REPLIK SERVER * * *\n")
 
-    # -- empty the handing dir --
-    shutil.rmtree(const.running_files_dir_for_scheduler())
-    makedirs(const.running_files_dir_for_scheduler())
-    # --
-
     n_cpus = get_system_cpu_count()
     n_mem = get_system_memory_gb()
     resources = ResourceMonitor(cpu_count=n_cpus, gpu_count=n_gpus, mem_gb=n_mem)
@@ -175,11 +170,15 @@ def server(n_gpus: int):
             socket.send_json(get_is_alive_msg())
         elif MsgType.REQUEST_UID == get_msg_type(msg):
             info = msg["info"]
-            proc = scheduler.create_new_process(info)
+            proc = scheduler.add_process_to_staging(info)
             socket.send_json(
-                {"msg": MsgType.SEND_UID, "uid": proc.uid, "mark": get_mark_file(uid)}
+                {
+                    "msg": MsgType.SEND_UID,
+                    "uid": proc.uid,
+                    "container_name": proc.container_name(),
+                    "mark": get_mark_file(uid),
+                }
             )
-            scheduler.add_process_to_staging(proc)
 
         print(msg)
 

@@ -24,6 +24,7 @@ class ReplikProcess:
         super().__init__()
         self.info = info
         self.uid = uid
+        # self.uid = "replik_%04d" % uid
         self.is_running = False
         self.minimum_required_running_hours = (
             info["minimum_required_running_hours"]
@@ -38,14 +39,15 @@ class ReplikProcess:
         self.resources = Resources(info)
         self.place = Place.NOT_PLACED
 
+    def container_name(self):
+        return "replik_%04d" % self.uid
+
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         uid = self.uid
-        runt = self.running_time_in_h()
-        waitt = self.waiting_time_in_h()
-        return f"({uid}, running for %04.02fh, waiting for %04.02fh)" % (runt, waitt)
+        return f"[{uid}, " + str(self.resources) + "]"
 
     def running_time_in_h(self, cur_time_in_s=None):
         return self.running_time_in_s(cur_time_in_s) / 3600

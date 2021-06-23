@@ -119,7 +119,7 @@ class ResourceMonitor:
         # "virtual"!
         available_resources = current_res
         for proc in unscheduling:
-            available_resources.add(proc.resources)
+            available_resources = available_resources.add(proc.resources)
 
         # (2) try to schedule all processes that are in the
         # waiting queue
@@ -129,8 +129,8 @@ class ResourceMonitor:
             if available_resources.fits(proc.resources):
                 available_resources = available_resources.subtract(proc.resources)
                 procs_to_schedule.append(proc)
-            else:
-                procs_to_staging.append(proc)
+            # else:
+            #     procs_to_staging.append(proc)
 
         # (3) check if some of the old processes still fit... if so we will
         # just let them be and let them KEEP their current GPUs!
@@ -140,7 +140,8 @@ class ResourceMonitor:
                 available_resources = available_resources.subtract(proc.resources)
             else:
                 procs_to_kill.append(proc)
-        procs_to_staging = procs_to_staging + procs_to_kill
+        # procs_to_staging = procs_to_staging + procs_to_kill
+        procs_to_staging = procs_to_kill
 
         # (4) clean-up the gpu assignments
         gpus = deepcopy(self.gpus)

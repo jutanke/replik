@@ -2,7 +2,12 @@ import threading
 import json
 import replik.scheduler.docker as docker
 import replik.constants as const
-from replik.scheduler.schedule import ReplikProcess, rank_processes_that_can_be_killed
+from replik.scheduler.schedule import (
+    ReplikProcess,
+    rank_processes_that_can_be_killed,
+    get_container_name,
+    Place,
+)
 from replik.scheduler.resource_monitor import (
     ResourceMonitor,
     get_system_cpu_count,
@@ -158,13 +163,23 @@ class Scheduler:
                     self.resources.remove_process(proc)
                     delete_procs.append(proc)
                     unmark_uid_as_running(proc.uid)
+                    proc.push_to_kill()
+
         self.remove_from_running_queue(delete_procs)
 
         # (2) kill processes that are requested to be killed
         if self.verbose:
             console.info("(2) kill processes that are scheduled to be killed")
+        delete_procs_from_running = []
+
+        already_killed_uid = set()  # make sure we don't kill duplicates
         while len(self.KILLING_QUEUE) > 0:
             uid = self.KILLING_QUEUE.pop()
+            if uid in already_killed_uid:
+                continue
+            already_killed_uid.add(uid)
+
+            container_name = get_container_name(uid)
 
             # (2.1) check if the requested process is only in staging
             is_removed_from_staging = False
@@ -173,6 +188,7 @@ class Scheduler:
                 if proc.uid == uid:
                     self.STAGING_QUEUE.pop(i)
                     unmark_uid_as_staging(proc.uid)
+                    proc.push_to_kill()
                     is_removed_from_staging = True
                     if self.verbose:
                         console.info(f"\tremove {proc.uid} from staging")
@@ -181,8 +197,14 @@ class Scheduler:
             if not is_removed_from_staging:
                 # (2.2) process-to-be-killed is not found in staging
                 # we have to kill it properly
-                if uid in running_docker_containers:
-                    self.kill(proc)
+                for proc, _ in self.RUNNING_QUEUE:
+                    if proc.uid == uid and container_name in running_docker_containers:
+                        self.kill(proc)
+                        proc.push_to_kill()
+                        delete_procs_from_running.append(proc)
+                        break
+
+        self.remove_from_running_queue(delete_procs_from_running)
 
         # (3) find which processes to kill and which ones to schedule
         if self.verbose:
@@ -190,9 +212,6 @@ class Scheduler:
         procs_to_be_killed = rank_processes_that_can_be_killed(
             [t[0] for t in self.RUNNING_QUEUE], current_time_in_s=current_time_in_s
         )
-
-        # print("procs_to_be_killed", procs_to_be_killed)
-        # exit()
 
         (
             procs_to_actually_kill,

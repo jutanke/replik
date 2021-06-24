@@ -17,6 +17,11 @@ class Place:
     NOT_PLACED = 0
     STAGING = 1
     RUNNING = 2
+    KILLED = 3  # this will be gc'd soon!
+
+
+def get_container_name(uid):
+    return "replik_%08d" % uid
 
 
 class ReplikProcess:
@@ -40,7 +45,7 @@ class ReplikProcess:
         self.place = Place.NOT_PLACED
 
     def container_name(self):
-        return "replik_%04d" % self.uid
+        return get_container_name(self.uid)
 
     def __repr__(self):
         return self.__str__()
@@ -81,6 +86,11 @@ class ReplikProcess:
         self.place = Place.STAGING
         self.staging_started_time = cur_time_in_s
         self.running_started_time = -1
+
+    def push_to_kill(self):
+        self.running_started_time = -1
+        self.staging_started_time = -1
+        self.place = Place.KILLED
 
     def must_be_killed(self, cur_time_in_s=None):
         currently_running_h = self.running_time_in_h(cur_time_in_s)

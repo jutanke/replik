@@ -6,12 +6,27 @@ from os.path import isfile
 
 
 class TestSchedulingStep(unittest.TestCase):
+    def assert_is_running(self, proc):
+        self.assertFalse(isfile(SCHEDULER.get_mark_file_staging(proc.uid)))
+        self.assertTrue(isfile(SCHEDULER.get_mark_file(proc.uid)))
+        self.assertEqual(proc.place, SCHED.Place.RUNNING)
+
+    def assert_is_staging(self, proc):
+        self.assertTrue(isfile(SCHEDULER.get_mark_file_staging(proc.uid)))
+        self.assertFalse(isfile(SCHEDULER.get_mark_file(proc.uid)))
+        self.assertEqual(proc.place, SCHED.Place.STAGING)
+
+    def assert_is_gone(self, proc):
+        self.assertFalse(isfile(SCHEDULER.get_mark_file_staging(proc.uid)))
+        self.assertFalse(isfile(SCHEDULER.get_mark_file(proc.uid)))
+        self.assertEqual(proc.place, SCHED.Place.KILLED)
+
     def WWtest_scheduling_step(self):
 
         FAKE_DOCKER = {}
 
         def fun_docker_kill(uid):
-            assert uid in FAKE_DOCKER
+            assert uid in FAKE_DOCKER, f"{uid} not in: " + str(FAKE_DOCKER.keys())
             del FAKE_DOCKER[uid]
 
         mon = ResourceMonitor(cpu_count=5, gpu_count=5, mem_gb=100)
@@ -129,7 +144,7 @@ class TestSchedulingStep(unittest.TestCase):
         FAKE_DOCKER = {}
 
         def fun_docker_kill(uid):
-            assert uid in FAKE_DOCKER
+            assert uid in FAKE_DOCKER, f"{uid} not in: " + str(FAKE_DOCKER.keys())
             del FAKE_DOCKER[uid]
 
         mon = ResourceMonitor(cpu_count=20, gpu_count=3, mem_gb=100)
@@ -252,6 +267,7 @@ class TestSchedulingStep(unittest.TestCase):
         self.assertFalse(isfile(SCHEDULER.get_mark_file(proc4.uid)))
         self.assertTrue(isfile(SCHEDULER.get_mark_file_staging(proc5.uid)))
         self.assertFalse(isfile(SCHEDULER.get_mark_file(proc5.uid)))
+
         # current status:
         # RUNNING: [p3, p2(2x)]
         # STAGING: [p4, p5, p1(2x)]
@@ -262,13 +278,25 @@ class TestSchedulingStep(unittest.TestCase):
         # more than 3h has passed: lets re-schedule!
         # * kill p2
         # * schedule p4, p5, keep p3
-        print(FAKE_DOCKER)
         scheduler.scheduling_step(
             list(FAKE_DOCKER.keys()), current_time_in_s=160 + 60 * 60 * 3
         )
+        self.assertEqual(2, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
 
-        print(FAKE_DOCKER)
+        self.assert_is_staging(proc1)
+        self.assert_is_staging(proc2)
+        self.assert_is_running(proc3)  # is already running
+        self.assert_is_running(proc4)
+        FAKE_DOCKER[proc4.container_name()] = "RUNNING"
+        self.assert_is_running(proc5)
+        FAKE_DOCKER[proc5.container_name()] = "RUNNING"
 
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 6 (do nothing)
+        # = = = = = = = = = = = = = = = = =
+        CUR_TIME = 300 + 60 * 60 * 3
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
         self.assertEqual(2, len(scheduler.STAGING_QUEUE))
         self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
 
@@ -279,27 +307,149 @@ class TestSchedulingStep(unittest.TestCase):
         self.assert_is_running(proc5)
 
         # = = = = = = = = = = = = = = = = =
-        # S T E P 6 (do nothing)
+        # S T E P 7 (schedule a new process)
         # = = = = = = = = = = = = = = = = =
-        scheduler.scheduling_step(
-            list(FAKE_DOCKER.keys()), current_time_in_s=300 + 60 * 60 * 3
+        # current status:
+        # RUNNING: [p3, p4, p5]
+        # STAGING: [p1(2x), p2(2x)]
+        CUR_TIME += 150
+        proc6 = scheduler.add_process_to_staging(
+            {"cpus": 5, "gpus": 1, "memory": "10g"}, cur_time_in_s=CUR_TIME
         )
-        # self.assertEqual(2, len(scheduler.STAGING_QUEUE))
-        # self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assertEqual(3, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_staging(proc1)
+        self.assert_is_staging(proc2)
+        self.assert_is_staging(proc6)
+        self.assert_is_running(proc3)
+        self.assert_is_running(proc4)
+        self.assert_is_running(proc5)
 
-        # self.assert_is_staging(proc1)
-        # self.assert_is_staging(proc2)
-        # self.assert_is_running(proc3)
-        # self.assert_is_running(proc4)
-        # self.assert_is_running(proc5)
+        CUR_TIME += 5
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        # proc3 has to be killed as we can now fit a new process onto the system
+        # schedule proc6
+        self.assertEqual(3, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_staging(proc1)
+        self.assert_is_staging(proc2)
+        self.assert_is_staging(proc3)
+        self.assert_is_running(proc4)
+        self.assert_is_running(proc5)
+        self.assert_is_running(proc6)
+        FAKE_DOCKER[proc6.container_name()] = "RUNNING"
+        # current status:
+        # RUNNING: [p4, p5, p6]
+        # STAGING: [p1(2x), p2(2x), p3]
 
-    def assert_is_running(self, proc):
-        self.assertFalse(isfile(SCHEDULER.get_mark_file_staging(proc.uid)))
-        self.assertTrue(isfile(SCHEDULER.get_mark_file(proc.uid)))
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 8 (do nothing)
+        # = = = = = = = = = = = = = = = = =
+        # RUNNING: [p4, p5, p6]
+        # STAGING: [p1(2x), p2(2x), p3]
+        CUR_TIME += 50
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(3, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_staging(proc1)
+        self.assert_is_staging(proc2)
+        self.assert_is_staging(proc3)
+        self.assert_is_running(proc4)
+        self.assert_is_running(proc5)
+        self.assert_is_running(proc6)
 
-    def assert_is_staging(self, proc):
-        self.assertTrue(isfile(SCHEDULER.get_mark_file_staging(proc.uid)))
-        self.assertFalse(isfile(SCHEDULER.get_mark_file(proc.uid)))
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 9 (kill p5 & p2)
+        # = = = = = = = = = = = = = = = = =
+        # RUNNING: [p4, p5, p6]
+        # STAGING: [p1(2x), p2(2x), p3]
+
+        scheduler.schedule_uid_for_killing(proc5.uid)
+        scheduler.schedule_uid_for_killing(proc2.uid)
+        self.assertEqual(2, len(scheduler.KILLING_QUEUE))
+
+        CUR_TIME += 50
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(1, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_staging(proc1)
+        self.assert_is_gone(proc2)
+        self.assert_is_running(proc3)
+        FAKE_DOCKER[proc3.container_name()] = "RUNNING"
+        self.assert_is_running(proc4)
+        self.assert_is_gone(proc5)
+        self.assert_is_running(proc6)
+
+        # current status
+        # RUNNING: [p4, p3, p6]
+        # STAGING: [p1(2x)]
+
+        CUR_TIME += 60 * 56  # barely exceed the limit for one!
+        # no re-scheduling is possible yet!
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(1, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_staging(proc1)
+        self.assert_is_running(proc3)
+        self.assert_is_running(proc4)
+        self.assert_is_running(proc6)
+
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 10 (reshedule some)
+        # = = = = = = = = = = = = = = = = =
+        CUR_TIME += 60 * 3
+
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(2, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(2, len(scheduler.RUNNING_QUEUE))
+        self.assert_is_running(proc1)
+        FAKE_DOCKER[proc1.container_name()] = "RUNNING"
+        self.assert_is_running(proc3)
+        self.assert_is_staging(proc4)
+        self.assert_is_staging(proc6)
+
+        # RUNNING: [p3, p1(2x)]
+        # STAGING: [p4, p6]
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 11 (reshedule some)
+        # = = = = = = = = = = = = = = = = =
+        CUR_TIME += 60 * 3
+
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        # for proc, _ in scheduler.RUNNING_QUEUE:
+        #     print(proc.running_time_in_h(CUR_TIME), proc.may_be_killed(CUR_TIME))
+        self.assert_is_running(proc1)
+        self.assert_is_running(proc3)
+        self.assert_is_staging(proc4)
+        self.assert_is_staging(proc6)
+
+        # RUNNING: [p3, p1(2x)]
+        # STAGING: [p4, p6]
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 11 (reshedule some)
+        # = = = = = = = = = = = = = = = = =
+        CUR_TIME += 60 * 1 * 60
+
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(1, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+        # RUNNING: [p3, p4, p6]
+        # STAGING: [p1(2x)]
+        # for proc, _ in scheduler.RUNNING_QUEUE:
+        #     print(
+        #         proc.uid, proc.running_time_in_h(CUR_TIME), proc.may_be_killed(CUR_TIME)
+        #     )
+        self.assert_is_staging(proc1)
+        self.assert_is_running(proc3)
+        self.assert_is_running(proc4)
+        self.assert_is_running(proc6)
+        FAKE_DOCKER[proc4.container_name()] = "RUNNING"
+        FAKE_DOCKER[proc6.container_name()] = "RUNNING"
 
 
 if __name__ == "__main__":

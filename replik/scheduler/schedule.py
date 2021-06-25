@@ -164,12 +164,12 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
 
                 docker_exec_command = "docker run" + RUN.set_shm_cpu_memory(info)
                 if len(gpus) > 0:
-                    docker_exec_command += '--gpus  "device='
+                    docker_exec_command += "--gpus '" + '"device='
                     for i, gpuid in enumerate(gpus):
                         if i > 0:
                             docker_exec_command += ","
                         docker_exec_command += str(gpuid)
-                    docker_exec_command += '" '
+                    docker_exec_command += '"' + "' "
 
                 docker_exec_command += RUN.set_all_paths(directory, info)
                 docker_exec_command += f"--name {container_name} "

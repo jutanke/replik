@@ -1,1 +1,1 @@
-python -m replik.scheduler.server $1
+python3 -m replik.scheduler.server $1

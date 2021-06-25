@@ -14,3 +14,5 @@ Any replik project is made up of these files:
     * ```minimum_required_running_hours```: minimal amount of time that that a project needs to run un-interruptedly. If a container for this project is scheduled and running and exceeds this time it may be killed to schedule new processes.
     * ```stdout_to_file```: If true stdout/stderr will be forwarded to a file
 
+When replik is scheduled, it runs within a docker container where the project is mapped to ```/home/user/```.
+The user ```user``` in the docker container gets the same unix UID as the current user so that all files that are written are created by the host user.

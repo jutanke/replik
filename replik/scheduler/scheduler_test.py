@@ -21,7 +21,32 @@ class TestSchedulingStep(unittest.TestCase):
         self.assertFalse(isfile(SCHEDULER.get_mark_file(proc.uid)))
         self.assertEqual(proc.place, SCHED.Place.KILLED)
 
-    def WWtest_scheduling_step(self):
+    def test_scheduling_without_gpu(self):
+        FAKE_DOCKER = {}
+
+        def fun_docker_kill(uid):
+            assert uid in FAKE_DOCKER, f"{uid} not in: " + str(FAKE_DOCKER.keys())
+            del FAKE_DOCKER[uid]
+
+        mon = ResourceMonitor(cpu_count=5, gpu_count=5, mem_gb=100)
+        scheduler = SCHEDULER.Scheduler(
+            mon, fun_docker_kill=fun_docker_kill, max_id=100
+        )
+
+        CUR_TIME = 0
+
+        proc1 = scheduler.add_process_to_staging(
+            {"cpus": 1, "gpus": 0, "memory": "10g"}, cur_time_in_s=CUR_TIME
+        )
+
+        CUR_TIME += 1
+        scheduler.scheduling_step(
+            running_docker_containers=[], current_time_in_s=CUR_TIME
+        )
+        self.assertEqual(0, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(1, len(scheduler.RUNNING_QUEUE))
+
+    def test_scheduling_step(self):
 
         FAKE_DOCKER = {}
 
@@ -67,7 +92,7 @@ class TestSchedulingStep(unittest.TestCase):
         for proc, gpus in scheduler.RUNNING_QUEUE:
             self.assertEqual(SCHED.Place.RUNNING, proc.place)
 
-    def WWtest_scheduling_client_fails_to_run(self):
+    def test_scheduling_client_fails_to_run(self):
 
         FAKE_DOCKER = {}
 
@@ -131,7 +156,7 @@ class TestSchedulingStep(unittest.TestCase):
         self.assertFalse(isfile(SCHEDULER.get_mark_file(proc1.uid)))
 
         # -- step 3 --
-        scheduler.schedule_uid_for_killing(proc2.container_name())
+        scheduler.schedule_uid_for_killing(proc2.uid)
         cnt = list(FAKE_DOCKER.keys())
         scheduler.scheduling_step(running_docker_containers=cnt, current_time_in_s=120)
 
@@ -484,7 +509,31 @@ class TestSchedulingStep(unittest.TestCase):
         self.assert_is_running(proc7)
         self.assert_is_staging(proc8)
 
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 13 (reshedule some)
+        # = = = = = = = = = = = = = = = = =
+        # add proc9 without GPU req
+        CUR_TIME += 10
+        proc9 = scheduler.add_process_to_staging(
+            {"cpus": 1, "gpus": 0, "memory": "1g"}, cur_time_in_s=CUR_TIME
+        )
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(3, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(1, len(scheduler.RUNNING_QUEUE))
+        CUR_TIME += 5
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(2, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(2, len(scheduler.RUNNING_QUEUE))
+
+        self.assert_is_staging(proc3)
+        self.assert_is_running(proc7)
+        self.assert_is_staging(proc8)
+        self.assert_is_running(proc9)
+
         # print_running_queue(scheduler, CUR_TIME)
+        self.assertEqual(96, len(scheduler.FREE_IDS))
+        self.assertEqual(4, len(scheduler.USED_IDS))
 
 
 def print_running_queue(scheduler, CUR_TIME):

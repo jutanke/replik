@@ -52,7 +52,7 @@ def request_uid(info):
     if timeout:
         console.fail("Could not request uid: Timeout!")
         exit(0)
-    return msg["uid"], msg["mark"]
+    return msg["uid"], msg["mark"], msg["staging_mark"]
 
 
 # def request_scheduling(uid, info):

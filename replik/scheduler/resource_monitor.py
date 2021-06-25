@@ -155,13 +155,14 @@ class ResourceMonitor:
         for proc in procs_to_schedule:
             n_gpus = proc.resources.gpus
             proc_gpus = []
-            for i in range(len(gpus)):
-                if gpus[i] == None:
-                    proc_gpus.append(i)
-                    gpus[i] = proc.uid
-                    if len(proc_gpus) == n_gpus:
-                        break
-            assert len(proc_gpus) == n_gpus
+            if n_gpus > 0:
+                for i in range(len(gpus)):
+                    if gpus[i] == None:
+                        proc_gpus.append(i)
+                        gpus[i] = proc.uid
+                        if len(proc_gpus) == n_gpus:
+                            break
+            assert len(proc_gpus) == n_gpus, f"n_gpus:{n_gpus}, {proc_gpus}"
             procs_to_schedule_.append((proc, proc_gpus))
 
         return procs_to_kill, procs_to_schedule_, procs_to_staging

@@ -140,7 +140,7 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
 
         info = const.get_replik_settings(directory)
         tag = info["tag"]
-        uid, mark_file = client.request_uid(info)
+        uid, mark_file, staging_mark = client.request_uid(info)
 
         console.info(f"schedule as {uid}")
 
@@ -163,11 +163,17 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
 
                 docker_exec_command += RUN.set_all_paths(directory, info)
                 docker_exec_command += f"--rm -it {tag} " + final_docker_exec_command
-
                 out = call(docker_exec_command, shell=True)
                 if out == 0:
                     console.success(f"finished {uid}!")
                     exit(0)
+                else:
+                    console.warning("\nJob interrupted...")
+                    if isfile(staging_mark):
+                        console.info("\nplaced onto staging for re-scheduling...")
+                    else:
+                        console.warning("\nnot marked for re-scheduling... exiting now")
+                        exit(0)
 
         # client.request_scheduling(uid, info)
     else:

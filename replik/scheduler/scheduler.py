@@ -2,6 +2,7 @@ import threading
 import json
 import replik.scheduler.docker as docker
 import replik.constants as const
+import replik.console as console
 from replik.scheduler.schedule import (
     ReplikProcess,
     rank_processes_that_can_be_killed,
@@ -146,10 +147,13 @@ class Scheduler:
         if current_time_in_s is None:
             current_time_in_s = time.time()
 
+        if self.verbose:
+            console.info(
+                f"Scheduling step, running:{len(self.RUNNING_QUEUE)}, staging:{len(self.STAGING_QUEUE)}"
+            )
+
         # (1) check if we have to update the running queue, e.g. if any of the currently running processes
         # have been killed
-        if self.verbose:
-            console.info("(1) cleanup externally killed processes")
         delete_procs = []
         for idx, (proc, gpus) in enumerate(self.RUNNING_QUEUE):
             elapsed_secs_since_schedule = proc.running_time_in_s(current_time_in_s)
@@ -168,8 +172,6 @@ class Scheduler:
         self.remove_from_running_queue(delete_procs)
 
         # (2) kill processes that are requested to be killed
-        if self.verbose:
-            console.info("(2) kill processes that are scheduled to be killed")
         delete_procs_from_running = []
 
         already_killed_uid = set()  # make sure we don't kill duplicates
@@ -207,8 +209,6 @@ class Scheduler:
         self.remove_from_running_queue(delete_procs_from_running)
 
         # (3) find which processes to kill and which ones to schedule
-        if self.verbose:
-            console.info("(3) scheduling")
         procs_to_be_killed = rank_processes_that_can_be_killed(
             [t[0] for t in self.RUNNING_QUEUE], current_time_in_s=current_time_in_s
         )
@@ -220,12 +220,6 @@ class Scheduler:
         ) = self.resources.schedule_appropriate_resources(
             procs_to_be_killed, self.STAGING_QUEUE
         )
-
-        # print("[STAGING]", self.STAGING_QUEUE)
-        # print("[RUNNING]", self.RUNNING_QUEUE)
-        # print("procs_to_actually_kill", procs_to_actually_kill)
-        # print("procs_to_schedule", procs_to_schedule)
-        # print("procs_to_staging", procs_to_staging)
 
         # it is important that we mark all the processes that we gonna
         # kill for staging BEFORE we kill them so that they know that

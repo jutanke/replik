@@ -1,5 +1,29 @@
 # Scheduling
 
+## Check currently scheduled resources
+To get an overview of the scheduling system and free resources simply
+```
+replik schedule-info
+```
+which will return outputs that look like this:
+```
+~ ~ free / total resources ~ ~
+cpus:    4 / 12
+gpus:    2 / 4
+memory:  20 / 52
+
+~ ~ staging (#0) ~ ~
+uid | docker tag | waiting time ~ ~
+
+
+~ ~ running (#1) ~ ~
+uid | docker tag | running time | gpus
+
+000000 | julian_tanke/replik_demo | 32 min | [0, 1]
+```
+**staging** lists all processes that are waiting to be scheduled (and for how long they are waiting) while **running** lists all currently running processes with their utilized GPUS + running time.
+
+
 ## Getting started
 A replik project provides simple scaffolding to encapsulate a project within a schedulable docker environment.
 This way projects become *schedulable* and hardware resources can be allocated as needed.

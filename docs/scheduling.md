@@ -50,6 +50,7 @@ To schedule the script we simply
 replik schedule --script="sample.sh hi ho"
 ```
 Once the resources are free the project is being scheduled and we see as output ```hello world hi ho```.
+Please note that the scheduling command has to be issued from the project root directory.
 
 **Important**: when scheduling and running the script the terminal needs to be open using ```tmux``` or ```screen```.
 

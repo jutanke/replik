@@ -37,6 +37,23 @@ umask 0022
 sudo pip install -r requirements.txt
 ```
 
+Move the following script into ```/etc/profile.d/```
+```bash
+alias python=python3
+replik(){
+    CURDIR=$PWD
+    REPDIR=/srv/replik
+    if [ "$#" == 1 ]; then
+        cd $REPDIR && python -m replik.replik $CURDIR $1
+    elif [ "$#" == 2 ]; then
+        param2=$(echo $2 | tr ' ' '#')
+        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2
+    fi
+    cd $CURDIR
+}
+```
+assuming replik is located in ```/srv/replik```.
+
 ## Usage
 To create a new replik repository, navigate to a folder and
 ```

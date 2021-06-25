@@ -440,16 +440,58 @@ class TestSchedulingStep(unittest.TestCase):
         self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
         # RUNNING: [p3, p4, p6]
         # STAGING: [p1(2x)]
-        # for proc, _ in scheduler.RUNNING_QUEUE:
-        #     print(
-        #         proc.uid, proc.running_time_in_h(CUR_TIME), proc.may_be_killed(CUR_TIME)
-        #     )
         self.assert_is_staging(proc1)
         self.assert_is_running(proc3)
         self.assert_is_running(proc4)
         self.assert_is_running(proc6)
         FAKE_DOCKER[proc4.container_name()] = "RUNNING"
         FAKE_DOCKER[proc6.container_name()] = "RUNNING"
+
+        # current status:
+        # RUNNING: [p3, p4, p6]
+        # STAGING: [p1(2x)]
+        # = = = = = = = = = = = = = = = = =
+        # S T E P 12 (reshedule some)
+        # = = = = = = = = = = = = = = = = =
+        # request to kill p6 & p1
+        # p4 & p6 kill themselves before!
+        # add p7(3x) and p8
+        del FAKE_DOCKER[proc4.container_name()]
+        del FAKE_DOCKER[proc6.container_name()]
+        CUR_TIME += 60
+        scheduler.schedule_uid_for_killing(proc6.uid)
+        scheduler.schedule_uid_for_killing(proc1.uid)
+        proc7 = scheduler.add_process_to_staging(
+            {"cpus": 5, "gpus": 3, "memory": "10g"}, cur_time_in_s=CUR_TIME - 10
+        )
+        proc8 = scheduler.add_process_to_staging(
+            {"cpus": 5, "gpus": 1, "memory": "10g"}, cur_time_in_s=CUR_TIME
+        )
+        self.assertEqual(2, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(3, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(3, len(scheduler.RUNNING_QUEUE))
+
+        CUR_TIME += 5
+        scheduler.scheduling_step(list(FAKE_DOCKER.keys()), current_time_in_s=CUR_TIME)
+        self.assertEqual(0, len(scheduler.KILLING_QUEUE))
+        self.assertEqual(2, len(scheduler.STAGING_QUEUE))
+        self.assertEqual(1, len(scheduler.RUNNING_QUEUE))
+
+        self.assert_is_gone(proc1)
+        self.assert_is_staging(proc3)
+        self.assert_is_gone(proc4)
+        self.assert_is_gone(proc6)
+        self.assert_is_running(proc7)
+        self.assert_is_staging(proc8)
+
+        # print_running_queue(scheduler, CUR_TIME)
+
+
+def print_running_queue(scheduler, CUR_TIME):
+    for proc, gpus in scheduler.RUNNING_QUEUE:
+        print(
+            f"{proc.uid} -> {proc.may_be_killed(CUR_TIME)} ({proc.running_time_in_h(CUR_TIME)}), {gpus}"
+        )
 
 
 if __name__ == "__main__":

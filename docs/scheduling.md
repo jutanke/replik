@@ -61,3 +61,9 @@ Resources can be set in ```{root}/.replik/info.json``` by passing integer values
 * cpus
 * gpus
 * memory
+
+## How to kill a process
+You can kill the process in terminal (```ctrl+c```), via docker ```docker kill {container_name}``` or via ```replik```:
+```
+replik unschedule {uid}
+```

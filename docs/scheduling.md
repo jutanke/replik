@@ -51,4 +51,12 @@ replik schedule --script="sample.sh hi ho"
 ```
 Once the resources are free the project is being scheduled and we see as output ```hello world hi ho```.
 
+**Important**: when scheduling and running the script the terminal needs to be open using ```tmux``` or ```screen```.
+
 View [data documentation](https://github.com/jutanke/replik/blob/0.5.0/docs/data.md) to learn how to pass data to the container.
+
+### Resources
+Resources can be set in ```{root}/.replik/info.json``` by passing integer values or strings to:
+* cpus
+* gpus
+* memory

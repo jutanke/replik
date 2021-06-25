@@ -7,11 +7,16 @@ class MsgType(IntEnum):
     REQUEST_UID = 2
     SEND_UID = 3
     REQUEST_MURDER = 4
-    # RESP_PROCESS = 5
+    REQUEST_STATUS = 5  # current server situation
+    RESPOND_STATUS = 6
 
 
 def get_is_alive_msg():
     return {"msg": MsgType.ALIVE}
+
+
+def get_request_status_msg():
+    return {"msg": MsgType.REQUEST_STATUS}
 
 
 def get_murder_msg(uid):

@@ -7,7 +7,12 @@ A client needs to provide the following resources:
 import zmq
 import signal
 from time import time
-from replik.scheduler.message import get_is_alive_msg, get_request_uid_msg
+from replik.scheduler.message import (
+    get_is_alive_msg,
+    get_murder_msg,
+    get_request_uid_msg,
+    get_request_status_msg,
+)
 import replik.console as console
 
 context = zmq.Context()
@@ -52,12 +57,21 @@ def request_uid(info):
     if timeout:
         console.fail("Could not request uid: Timeout!")
         exit(0)
-    return msg["uid"], msg["mark"], msg["staging_mark"]
+
+    return msg["uid"], msg["container_name"], msg["mark"], msg["staging_mark"]
 
 
-# def request_scheduling(uid, info):
-#     msg = get_process_msg(uid, info)
+def request_to_kill_uid(uid):
+    timeout, msg = send_message_with_timeout(socket, get_murder_msg(uid))
+    if timeout:
+        console.fail("Could not kill uid: Timeout!")
+        exit(0)
+    console.warning(f"uid {uid} has been listed as 'unscheduled'")
 
-#     socket.send_json(msg)
-#     result = socket.recv_json()
-#     print("res", result)
+
+def request_server_infos():
+    timeout, msg = send_message_with_timeout(socket, get_request_status_msg())
+    if timeout:
+        console.fail("Could not request uid: Timeout!")
+        exit(0)
+    return msg["status"]

@@ -73,8 +73,14 @@ def server(n_gpus: int):
         elif MsgType.REQUEST_MURDER == get_msg_type(msg):
             uid = msg["uid"]
             scheduler.schedule_uid_for_killing(uid)
-
-        print(msg)
+            socket.send_json(get_is_alive_msg())
+        elif MsgType.REQUEST_STATUS == get_msg_type(msg):
+            socket.send_json(
+                {
+                    "msg": MsgType.RESPOND_STATUS,
+                    "status": scheduler.get_resources_infos_as_json(),
+                }
+            )
 
 
 if __name__ == "__main__":

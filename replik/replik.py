@@ -16,6 +16,8 @@ import replik.init as init
 import replik.run as run
 import replik.info as info
 import replik.scheduler.schedule as schedule
+import replik.scheduler.unschedule as unschedule
+import replik.scheduler.schedule_info as schedule_info
 
 
 def demask_script(script):
@@ -27,8 +29,8 @@ def demask_script(script):
 @click.argument("tool")
 @click.option("--script", default="demo_script.py")
 @click.option("--extra_paths", default="")
-@click.option("--sid", default="")
-def replik(directory, tool, script, extra_paths, sid):
+@click.option("--uid", default="")
+def replik(directory, tool, script, extra_paths, uid):
     """"""
     script = demask_script(script)
 
@@ -50,6 +52,10 @@ def replik(directory, tool, script, extra_paths, sid):
         schedule.execute(
             directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh"
         )
+    elif tool == "schedule-info":
+        schedule_info.execute()
+    elif tool == "unschedule":
+        unschedule.execute(uid)
     else:
         console.warning(f"no command '{tool}'")
 

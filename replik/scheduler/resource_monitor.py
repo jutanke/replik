@@ -22,6 +22,9 @@ class Resources:
         self.gpus = int(info["gpus"])
         self.memory = int(info["memory"].replace("g", ""))
 
+    def to_json(self):
+        return {"cpus": self.cpus, "gpus": self.gpus, "mem": self.memory}
+
     def __repr__(self):
         return self.__str__()
 
@@ -35,6 +38,9 @@ class FreeResources:
         self.mem_gb = mem_gb
         self.cpu_count = cpu_count
         self.gpu_count = gpu_count
+
+    def to_json(self):
+        return {"cpus": self.cpu_count, "gpus": self.gpu_count, "mem": int(self.mem_gb)}
 
     def subtract(self, res: Resources):
         """

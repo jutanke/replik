@@ -119,6 +119,39 @@ class Scheduler:
             []  # [{proc}, {gpus}]
         )  # currently running processes, READONLY for {Comm}, [R/W] for {Sched}. Contains (procs, gpus)
 
+    def get_resources_infos_as_json(self):
+        """gather all the resources so that we can display them!"""
+        self.lock.acquire()
+        res_free = self.resources.get_current_free_resources()
+        res_total = self.resources.maximal_resources
+        RUN = []
+        for proc, gpus in self.RUNNING_QUEUE:
+            gpus = list(sorted(gpus))
+            RUN.append(
+                {
+                    "info": proc.to_json(),
+                    "gpus": gpus,
+                    "running_in_h": proc.running_time_in_h(),
+                }
+            )
+        STAG = []
+        for proc in self.STAGING_QUEUE:
+            STAG.append(
+                {
+                    "info": proc.to_json(),
+                    "waiting_in_h": proc.waiting_time_in_h(),
+                }
+            )
+
+        self.lock.release()
+
+        return {
+            "free": res_free.to_json(),
+            "total": res_total.to_json(),
+            "running": RUN,
+            "staging": STAG,
+        }
+
     def remove_from_running_queue(self, remove_procs: List[ReplikProcess]):
         """"""
         if len(remove_procs) > 0:
@@ -149,7 +182,7 @@ class Scheduler:
 
         if self.verbose:
             console.info(
-                f"Scheduling step, running:{len(self.RUNNING_QUEUE)}, staging:{len(self.STAGING_QUEUE)}"
+                f"Scheduling step, running:{len(self.RUNNING_QUEUE)}, staging:{len(self.STAGING_QUEUE)}, #free ids:{len(self.FREE_IDS)}"
             )
 
         # (1) check if we have to update the running queue, e.g. if any of the currently running processes

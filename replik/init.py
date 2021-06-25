@@ -37,6 +37,7 @@ def execute(directory: str, simple=False):
 
     info = {
         "name": project_name,
+        "username": username,
         "tag": f"{username}/replik_{project_name}",
         "docker_shm": "32g",
         "memory": "32g",

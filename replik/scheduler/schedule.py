@@ -39,10 +39,20 @@ class ReplikProcess:
         self.maximal_running_hours = (
             info["maximal_running_hours"] if "maximal_running_hours" in info else 12
         )
+        self.username = info["username"] if "username" in info else "inkognito"
+        self.tag = info["tag"]
         self.staging_started_time = -1
         self.running_started_time = -1
         self.resources = Resources(info)
         self.place = Place.NOT_PLACED
+
+    def to_json(self):
+        return {
+            "uid": self.uid,
+            "username": self.username,
+            "tag": self.tag,
+            "resources": self.resources.to_json(),
+        }
 
     def container_name(self):
         return get_container_name(self.uid)
@@ -140,7 +150,7 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
 
         info = const.get_replik_settings(directory)
         tag = info["tag"]
-        uid, mark_file, staging_mark = client.request_uid(info)
+        uid, container_name, mark_file, staging_mark = client.request_uid(info)
 
         console.info(f"schedule as {uid}")
 
@@ -162,6 +172,7 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
                     docker_exec_command += '" '
 
                 docker_exec_command += RUN.set_all_paths(directory, info)
+                docker_exec_command += f"--name {container_name} "
                 docker_exec_command += f"--rm -it {tag} " + final_docker_exec_command
                 out = call(docker_exec_command, shell=True)
                 if out == 0:
@@ -174,5 +185,9 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
                     else:
                         console.warning("\nnot marked for re-scheduling... exiting now")
                         exit(0)
+            else:
+                if not isfile(staging_mark):
+                    console.warning("\nJob removed from staging...")
+                    exit(0)
     else:
         console.warning("Not a valid replik repository")

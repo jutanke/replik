@@ -50,3 +50,5 @@ To schedule the script we simply
 replik schedule --script="sample.sh hi ho"
 ```
 Once the resources are free the project is being scheduled and we see as output ```hello world hi ho```.
+
+View [data documentation](https://github.com/jutanke/replik/blob/0.5.0/docs/data.md) to learn how to pass data to the container.

@@ -1,3 +1,4 @@
+alias python=python3
 replik(){
     CURDIR=$PWD
     REPDIR=/srv/replik

@@ -1,0 +1,1 @@
+sudo cp replik_for_all.sh /etc/profile.d/replik_for_all.sh

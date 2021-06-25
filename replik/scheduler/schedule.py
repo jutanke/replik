@@ -174,7 +174,5 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
                     else:
                         console.warning("\nnot marked for re-scheduling... exiting now")
                         exit(0)
-
-        # client.request_scheduling(uid, info)
     else:
         console.warning("Not a valid replik repository")

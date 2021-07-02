@@ -24,6 +24,21 @@ echo '        cd $REPDIR && python -m replik.replik $CURDIR $1' >> $RC
 echo '    elif [ "$#" == 2 ]; then' >> $RC
 echo "        param2=$(echo $2 | tr ' ' '#')" >> $RC
 echo "        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2" >> $RC
+echo '    elif [ "$#" == 3 ]; then' >> $RC
+echo "        param2=$(echo $2 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $3 | tr ' ' '#')" >> $RC
+echo "        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2 $param3" >> $RC
+echo '    elif [ "$#" == 4 ]; then' >> $RC
+echo "        param2=$(echo $2 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $3 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $4 | tr ' ' '#')" >> $RC
+echo "        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2 $param3 $param4" >> $RC
+echo '    elif [ "$#" == 5 ]; then' >> $RC
+echo "        param2=$(echo $2 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $3 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $4 | tr ' ' '#')" >> $RC
+echo "        param3=$(echo $5 | tr ' ' '#')" >> $RC
+echo "        cd $REPDIR && python -m replik.replik $CURDIR $1 $param2 $param3 $param4 $param5" >> $RC
 echo "    fi" >> $RC
 echo '    cd $CURDIR' >> $RC
 echo "}" >> $RC

@@ -141,6 +141,7 @@ def execute(
     cpu: int,
     gpu: int,
     mem: int,
+    outfile_name: str,
 ):
     if const.is_replik_project(directory):
         # -- build the dockerfile --

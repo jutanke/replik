@@ -50,7 +50,12 @@ def replik(directory, tool, script, extra_paths, uid, cpu, gpu, mem, outfile_nam
             outfile_name=outfile_name,
         )
     elif tool == "enter":
-        run.execute(directory, script, final_docker_exec_command="/bin/bash")
+        run.execute(
+            directory,
+            script,
+            final_docker_exec_command="/bin/bash",
+            outfile_name=outfile_name,
+        )
     elif tool == "info":
         info.execute(directory)
     elif tool == "schedule":

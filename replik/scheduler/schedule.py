@@ -134,11 +134,25 @@ def rank_processes_that_can_be_killed(
     return must_be_killed + may_be_killed
 
 
-def execute(directory: str, script: str, final_docker_exec_command: str):
+def execute(
+    directory: str,
+    script: str,
+    final_docker_exec_command: str,
+    cpu: int,
+    gpu: int,
+    mem: int,
+):
     if const.is_replik_project(directory):
         # -- build the dockerfile --
         info = const.get_replik_settings(directory)
-        build.execute(directory, script, info)
+        if cpu > -1:
+            info["cpus"] = cpu
+        if gpu > -1:
+            info["gpus"] = gpu
+        if mem > -1:
+            info["memory"] = f"{mem}g"
+
+        build.execute(directory, script, info, outfile_name=outfile_name)
 
         # -- start actual scheduling --
 

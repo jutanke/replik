@@ -30,7 +30,11 @@ def demask_script(script):
 @click.option("--script", default="demo_script.py")
 @click.option("--extra_paths", default="")
 @click.option("--uid", default="")
-def replik(directory, tool, script, extra_paths, uid):
+@click.option("--cpu", default=-1)
+@click.option("--gpu", default=-1)
+@click.option("--mem", default=-1)
+@click.option("--outfile_name", default="")
+def replik(directory, tool, script, extra_paths, uid, cpu, gpu, mem, outfile_name):
     """"""
     script = demask_script(script)
 
@@ -43,6 +47,7 @@ def replik(directory, tool, script, extra_paths, uid):
             directory,
             script,
             final_docker_exec_command="/bin/bash /home/user/run.sh",
+            outfile_name=outfile_name,
         )
     elif tool == "enter":
         run.execute(directory, script, final_docker_exec_command="/bin/bash")
@@ -50,7 +55,13 @@ def replik(directory, tool, script, extra_paths, uid):
         info.execute(directory)
     elif tool == "schedule":
         schedule.execute(
-            directory, script, final_docker_exec_command="/bin/bash /home/user/run.sh"
+            directory,
+            script,
+            final_docker_exec_command="/bin/bash /home/user/run.sh",
+            cpu=cpu,
+            gpu=gpu,
+            mem=mem,
+            outfile_name=outfile_name,
         )
     elif tool == "schedule-info":
         schedule_info.execute()

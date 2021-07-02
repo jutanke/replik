@@ -39,7 +39,9 @@ def set_all_paths(directory: str, info: Dict):
     return docker_exec_command
 
 
-def execute(directory: str, script: str, final_docker_exec_command: str):
+def execute(
+    directory: str, script: str, final_docker_exec_command: str, outfile_name: str
+):
     """"""
     info = const.get_replik_settings(directory)
     tag = info["tag"]
@@ -48,7 +50,7 @@ def execute(directory: str, script: str, final_docker_exec_command: str):
     gpus = int(info["gpus"])
     dockerdir = const.get_dockerdir(directory)
 
-    build.execute(directory, script, info)
+    build.execute(directory, script, info, outfile_name=outfile_name)
 
     # execute the docker image
 

@@ -9,7 +9,7 @@ from datetime import datetime
 import replik.console as console
 
 
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 
 FORBIDDEN_CHARACTERS = [
     " ",
@@ -40,6 +40,14 @@ FORBIDDEN_CHARACTERS = [
     "{",
     "}",
 ]
+
+
+def check_if_string_contains_forbidden_symbols(txt: str) -> bool:
+    global FORBIDDEN_CHARACTERS
+    for c in FORBIDDEN_CHARACTERS:
+        if c in txt:
+            return True
+    return False
 
 
 def running_files_dir_for_scheduler() -> str:
@@ -80,10 +88,13 @@ def is_broken_project(directory: str) -> bool:
     return isfile(join(directory, "docker/Dockerfile.bkp"))
 
 
-def get_stdout_file_in_container(directory: str) -> str:
+def get_stdout_file_in_container(directory: str, outfile_name: str = "") -> str:
     now = datetime.now()
     dt_string = now.strftime("%Y%m%d_%H%M%S")
-    return f"/home/user/.replik/logs/stdout_{dt_string}.log"
+    if len(outfile_name) == 0:
+        return f"/home/user/.replik/logs/stdout_{dt_string}.log"
+    else:
+        return f"/home/user/.replik/logs/{outfile_name}_{dt_string}.log"
 
 
 def get_replik_settings(directory: str) -> Dict:

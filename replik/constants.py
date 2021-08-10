@@ -9,7 +9,7 @@ from datetime import datetime
 import replik.console as console
 
 
-VERSION = "0.5.1"
+VERSION = "0.6.0"
 
 FORBIDDEN_CHARACTERS = [
     " ",

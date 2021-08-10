@@ -85,6 +85,7 @@ def execute(directory: str, simple=False):
     utils.copy2target("hook_post_useradd", templates_dir, docker_dir)
     utils.copy2target("hook_pre_useradd", templates_dir, docker_dir)
     utils.copy2target("bashhook.sh", templates_dir, docker_dir)
+    utils.copy2target("killhook.sh", templates_dir, docker_dir)
     utils.copy2target("Dockerfile", templates_dir, docker_dir)
     dockerignore_tar = join(docker_dir, ".dockerignore")
     copyfile(join(templates_dir, "dockerignore"), dockerignore_tar)

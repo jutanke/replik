@@ -1,8 +1,14 @@
 from subprocess import call
 import subprocess
+import time
 
 
 def kill(container_name: str):
+    call(
+        f"docker exec -d {container_name} bash /home/user/docker/killhook.sh",
+        shell=True,
+    )
+    time.sleep(10)
     call(f"docker kill {container_name}", shell=True)
 
 

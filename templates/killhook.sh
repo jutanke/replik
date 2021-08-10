@@ -1,0 +1,1 @@
+echo "about to be killed"

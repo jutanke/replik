@@ -40,6 +40,7 @@ class ReplikProcess:
             info["maximal_running_hours"] if "maximal_running_hours" in info else 12
         )
         self.username = info["username"] if "username" in info else "inkognito"
+        self.run_forever = info["run_forever"] if "run_forever" in info else False
         self.tag = info["tag"]
         self.staging_started_time = -1
         self.running_started_time = -1
@@ -103,10 +104,14 @@ class ReplikProcess:
         self.place = Place.KILLED
 
     def must_be_killed(self, cur_time_in_s=None):
+        if self.run_forever:
+            return False
         currently_running_h = self.running_time_in_h(cur_time_in_s)
         return currently_running_h > self.maximal_running_hours
 
     def may_be_killed(self, cur_time_in_s=None):
+        if self.run_forever:
+            return False
         currently_running_h = self.running_time_in_h(cur_time_in_s)
         return currently_running_h > self.minimum_required_running_hours
 
